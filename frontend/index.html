@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Engineer Skill Assessment System</title>
+    <!-- Chart.js for Admin Dashboard Radar Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="app">
+        <header id="main-header" class="hidden">
+            <div class="logo">Skill Matrix</div>
+            <nav id="user-nav">
+                <span id="current-username"></span>
+                <button id="logout-btn" class="btn btn-secondary">登出 (Logout)</button>
+            </nav>
+        </header>
+
+        <main id="main-content">
+            <!-- View templates will be injected here by app.js -->
+        </main>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
