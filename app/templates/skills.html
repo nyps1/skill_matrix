@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Skill Management - Skill Matrix{% endblock %}
+
+{% block nav_links %}
+<li class="nav-item"><a class="nav-link fw-semibold" href="/dashboard">Overview Analysis</a></li>
+<li class="nav-item"><a class="nav-link active fw-semibold" href="/skills">Skill Management</a></li>
+<li class="nav-item"><a class="nav-link fw-semibold" href="/users">Users & Permissions</a></li>
+<li class="nav-item"><a class="nav-link fw-semibold" href="/questions">Question Bank</a></li>
+{% endblock %}
+
+{% block content %}
+<h4 class="mb-4 fw-bold text-dark">Skill & Exam Category Management</h4>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-secondary text-white fw-bold">Create New Skill / Exam Category</div>
+    <div class="card-body p-4">
+        <form id="add-skill-form" class="row g-3">
+            <div class="col-md-5">
+                <label class="form-label required fw-semibold">Skill Name</label>
+                <input type="text" class="form-control" id="new-s-name" placeholder="e.g., Python, Frontend, AWS" required>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label fw-semibold">Description</label>
+                <input type="text" class="form-control" id="new-s-desc" placeholder="Brief description (optional)">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-secondary w-100 fw-semibold">Add Skill</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-light fw-bold">Existing Skill Categories</div>
+    <div class="card-body p-4" id="skills-list-container">
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadSkills() {
+    const container = document.getElementById('skills-list-container');
+    try {
+        const skills = await Api.getSkills();
+        if (skills.length === 0) {
+            container.innerHTML = `<p class="text-muted mb-0">No skill categories created yet.</p>`;
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="d-flex flex-wrap gap-2">
+                ${skills.map(s => `
+                    <div class="badge bg-info text-dark fs-6 px-3 py-2 border border-info-subtle shadow-sm text-start">
+                        <div class="fw-bold">${escapeHtml(s.name)}</div>
+                        ${s.description ? `<div class="small fw-normal text-secondary mt-1">${escapeHtml(s.description)}</div>` : ''}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } catch (err) {
+        container.innerHTML = `<div class="alert alert-danger mb-0">Failed to load skills: ${err.message}</div>`;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadSkills();
+
+    document.getElementById('add-skill-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('new-s-name').value;
+        const desc = document.getElementById('new-s-desc').value;
+        try {
+            await Api.createSkill({ name, description: desc });
+            showToast('Skill created successfully');
+            document.getElementById('new-s-name').value = '';
+            document.getElementById('new-s-desc').value = '';
+            loadSkills();
+        } catch (err) {
+            showToast('Failed to create skill: ' + err.message);
+        }
+    });
+});
+</script>
+{% endblock %}

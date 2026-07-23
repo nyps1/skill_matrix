@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+
+{% block title %}Question Bank - Skill Matrix{% endblock %}
+
+{% block nav_links %}
+<li class="nav-item"><a class="nav-link fw-semibold" href="/dashboard">Overview Analysis</a></li>
+<li class="nav-item"><a class="nav-link fw-semibold" href="/skills">Skill Management</a></li>
+<li class="nav-item"><a class="nav-link fw-semibold" href="/users">Users & Permissions</a></li>
+<li class="nav-item"><a class="nav-link active fw-semibold" href="/questions">Question Bank</a></li>
+{% endblock %}
+
+{% block content %}
+<h4 class="mb-4 fw-bold text-dark">Question Bank Management</h4>
+
+<!-- Top Block: Question Creation & Editing Form -->
+<div class="card shadow-sm border-0 mb-4" id="form-card">
+    <div class="card-header bg-primary text-white fw-bold d-flex justify-content-between align-items-center" id="form-header">
+        <span id="form-title">Create New Question</span>
+        <button id="btn-cancel-edit" class="btn btn-sm btn-light text-dark hidden">Cancel Edit</button>
+    </div>
+    <div class="card-body p-4">
+        <form id="question-form">
+            <input type="hidden" id="editing-q-id" value="">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label required fw-semibold">Skill / Exam Category</label>
+                    <select class="form-select" id="q-skill" required>
+                        <!-- Options injected dynamically -->
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required fw-semibold">Question Type</label>
+                    <select class="form-select" id="q-type" required>
+                        <option value="multiple_choice">Multiple Choice</option>
+                        <option value="open_ended">Open Ended / Short Answer</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label required fw-semibold">Question Content</label>
+                    <textarea class="form-control" id="q-content" rows="3" placeholder="Enter full question content" required></textarea>
+                </div>
+                <div class="col-md-6" id="options-container">
+                    <label class="form-label fw-semibold">Options (JSON Array format)</label>
+                    <input type="text" class="form-control" id="q-options" placeholder='["Option A", "Option B", "Option C"]'>
+                </div>
+                <div class="col-md-6" id="answer-container">
+                    <label class="form-label required fw-semibold">Standard Answer</label>
+                    <input type="text" class="form-control" id="q-answer" placeholder="Enter standard answer" required>
+                </div>
+                <div class="col-12 mt-3">
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btn-submit-q">Submit Question</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Bottom Block: Exam Bank Status & Question Cards -->
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center py-3">
+        <h5 class="mb-0 fw-bold text-dark">Current Exam Bank Status</h5>
+        <span class="badge bg-secondary fs-6" id="questions-count-badge">0 Questions</span>
+    </div>
+    <div class="card-body p-4" id="questions-list-container">
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let skillsList = [];
+let allQuestions = [];
+let editingQuestionId = null;
+
+async function initPage() {
+    try {
+        const [skills, questions] = await Promise.all([
+            Api.getSkills(),
+            Api.getQuestions()
+        ]);
+        skillsList = skills;
+        allQuestions = questions;
+
+        const skillSelect = document.getElementById('q-skill');
+        if (skillsList.length === 0) {
+            skillSelect.innerHTML = `<option value="">No skills available. Create a skill first.</option>`;
+        } else {
+            skillSelect.innerHTML = skillsList.map(s => `
+                <option value="${s.id}">${escapeHtml(s.name)}</option>
+            `).join('');
+        }
+
+        renderQuestionsForSelectedSkill();
+
+        skillSelect.addEventListener('change', () => {
+            renderQuestionsForSelectedSkill();
+        });
+
+        document.getElementById('q-type').addEventListener('change', (e) => {
+            const optsCol = document.getElementById('options-container');
+            if (e.target.value === 'multiple_choice') {
+                optsCol.classList.remove('d-none');
+            } else {
+                optsCol.classList.add('d-none');
+            }
+        });
+
+    } catch (err) {
+        document.getElementById('questions-list-container').innerHTML = 
+            `<div class="alert alert-danger mb-0">Failed to load data: ${err.message}</div>`;
+    }
+}
+
+function renderQuestionsForSelectedSkill() {
+    const container = document.getElementById('questions-list-container');
+    const badge = document.getElementById('questions-count-badge');
+    const selectedSkillId = parseInt(document.getElementById('q-skill').value);
+
+    if (!selectedSkillId) {
+        container.innerHTML = `<p class="text-muted text-center py-4">Select a skill to view question bank status.</p>`;
+        badge.textContent = '0 Questions';
+        return;
+    }
+
+    const filtered = allQuestions.filter(q => q.skill_id === selectedSkillId);
+    badge.textContent = `${filtered.length} Question${filtered.length === 1 ? '' : 's'}`;
+
+    if (filtered.length === 0) {
+        container.innerHTML = `<div class="alert alert-info mb-0 text-center">No questions added yet for this skill category. Use the form above to add the first question.</div>`;
+        return;
+    }
+
+    container.innerHTML = filtered.map((q, idx) => `
+        <div class="card mb-3 border shadow-sm" id="q-card-${q.id}">
+            <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
+                <div>
+                    <span class="fw-bold text-primary fs-5 me-2">Q${idx + 1}.</span>
+                    <span class="badge ${q.type === 'multiple_choice' ? 'bg-info text-dark' : 'bg-secondary'} me-2">
+                        ${q.type === 'multiple_choice' ? 'Multiple Choice' : 'Open Ended'}
+                    </span>
+                    <span class="text-muted small">${escapeHtml(q.skill_name || '')}</span>
+                </div>
+                <button class="btn btn-sm btn-outline-primary btn-edit-q fw-semibold" data-id="${q.id}">
+                    Edit Question
+                </button>
+            </div>
+            <div class="card-body p-4">
+                <p class="fs-5 fw-semibold mb-3">${escapeHtml(q.content)}</p>
+                ${q.type === 'multiple_choice' && q.options ? `
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Options:</label>
+                        <div class="row g-2">
+                            ${q.options.map((opt, i) => `
+                                <div class="col-md-6">
+                                    <div class="p-2 bg-light rounded border text-dark">
+                                        <strong class="me-2">${String.fromCharCode(65 + i)}.</strong>${escapeHtml(opt)}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                <div class="p-3 bg-success-subtle border border-success-subtle rounded mt-2">
+                    <strong class="text-success-emphasis">Standard Answer:</strong> 
+                    <span class="text-dark ms-2">${escapeHtml(q.answer)}</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    // Bind Edit Buttons
+    document.querySelectorAll('.btn-edit-q').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const qid = parseInt(e.currentTarget.dataset.id);
+            const q = allQuestions.find(item => item.id === qid);
+            if (!q) return;
+
+            editingQuestionId = q.id;
+            document.getElementById('editing-q-id').value = q.id;
+            document.getElementById('q-skill').value = q.skill_id;
+            document.getElementById('q-type').value = q.type;
+            document.getElementById('q-content').value = q.content;
+            document.getElementById('q-options').value = q.options ? JSON.stringify(q.options) : '';
+            document.getElementById('q-answer').value = q.answer;
+
+            document.getElementById('form-title').textContent = `Edit Question Q${qid}`;
+            document.getElementById('btn-submit-q').textContent = 'Update Question';
+            document.getElementById('btn-submit-q').className = 'btn btn-warning px-4 fw-semibold';
+            document.getElementById('btn-cancel-edit').classList.remove('hidden');
+
+            document.getElementById('form-card').scrollIntoView({ behavior: 'smooth' });
+        });
+    });
+}
+
+function cancelEditing() {
+    editingQuestionId = null;
+    document.getElementById('editing-q-id').value = '';
+    document.getElementById('q-content').value = '';
+    document.getElementById('q-options').value = '';
+    document.getElementById('q-answer').value = '';
+    document.getElementById('form-title').textContent = 'Create New Question';
+    document.getElementById('btn-submit-q').textContent = 'Submit Question';
+    document.getElementById('btn-submit-q').className = 'btn btn-primary px-4 fw-semibold';
+    document.getElementById('btn-cancel-edit').classList.add('hidden');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initPage();
+
+    document.getElementById('btn-cancel-edit').addEventListener('click', () => {
+        cancelEditing();
+    });
+
+    document.getElementById('question-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const skill_id = parseInt(document.getElementById('q-skill').value);
+        const type = document.getElementById('q-type').value;
+        const content = document.getElementById('q-content').value;
+        const optionsText = document.getElementById('q-options').value;
+        const answer = document.getElementById('q-answer').value;
+
+        if (!skill_id) {
+            showToast('Please select a skill category');
+            return;
+        }
+
+        let options = null;
+        if (type === 'multiple_choice') {
+            try {
+                options = JSON.parse(optionsText);
+            } catch (err) {
+                showToast('Options format error: Must be valid JSON string array, e.g. ["A", "B"]');
+                return;
+            }
+        }
+
+        const payload = { skill_id, type, content, options, answer };
+
+        try {
+            if (editingQuestionId) {
+                await Api.updateQuestion(editingQuestionId, payload);
+                showToast('Question updated successfully');
+                cancelEditing();
+            } else {
+                await Api.createQuestion(payload);
+                showToast('Question created successfully');
+                document.getElementById('q-content').value = '';
+                document.getElementById('q-options').value = '';
+                document.getElementById('q-answer').value = '';
+            }
+
+            allQuestions = await Api.getQuestions();
+            renderQuestionsForSelectedSkill();
+        } catch (err) {
+            showToast('Failed to save question: ' + err.message);
+        }
+    });
+});
+</script>
+{% endblock %}

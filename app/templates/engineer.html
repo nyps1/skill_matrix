@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Engineer Dashboard - Skill Matrix{% endblock %}
+
+{% block nav_links %}
+<li class="nav-item"><a class="nav-link active fw-semibold" href="/engineer">Dashboard</a></li>
+<li class="nav-item"><a class="nav-link fw-semibold" href="/engineer/assessments">Assessments</a></li>
+<li class="nav-item"><a class="nav-link fw-semibold" href="/engineer/questions">Create Questions</a></li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0 fw-bold text-dark">My Skill Dashboard</h4>
+</div>
+
+<div id="dashboard-loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+</div>
+
+<div id="dashboard-content" class="hidden">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <!-- Main Radar Card -->
+            <div class="card dashboard-card shadow-sm border-0" style="z-index: 1;">
+                <div class="card-body">
+                    <h5 class="card-title text-primary fw-bold mb-1" id="summary-username">
+                        -
+                    </h5>
+                    <h6 class="card-subtitle mb-3 text-muted">
+                        Latest Total Score: 
+                        <span class="badge bg-secondary" id="summary-score">No Data</span>
+                    </h6>
+                    <div id="radar-wrapper" style="height: 280px;" class="hidden">
+                        <canvas id="my-radar-chart"></canvas>
+                    </div>
+                    <div id="no-radar-data" class="hidden text-center text-muted py-5">
+                        <p class="fs-6 fw-semibold mb-2">No skill data available</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Detail Panel (Always Expanded for Engineer) -->
+            <div id="detail-panel" class="mt-0">
+                <div class="card border-0 shadow-sm" style="border-radius: 0 0 14px 14px; margin-top: -1.5rem; z-index: 0; position: relative;">
+                    <div class="card-body pt-5 px-4 pb-4">
+                        <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">Skill Breakdown</h6>
+                        <div id="skill-cards-container">
+                            <!-- Skill cards injected here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function getScoreColor(score) {
+    if (score >= 8) return '#198754';
+    if (score >= 5) return '#fd7e14';
+    return '#dc3545';
+}
+
+function getScoreLabel(score) {
+    if (score >= 8) return 'Excellent';
+    if (score >= 5) return 'Adequate';
+    return 'Needs Improvement';
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const res = await Api.getMyDashboard();
+        document.getElementById('dashboard-loading').classList.add('hidden');
+        document.getElementById('dashboard-content').classList.remove('hidden');
+
+        document.getElementById('summary-username').textContent = res.user.username;
+        
+        const scoreBadge = document.getElementById('summary-score');
+        if (res.latest_score !== null) {
+            scoreBadge.textContent = res.latest_score;
+            scoreBadge.classList.replace('bg-secondary', 'bg-success');
+        }
+
+        const skillCards = document.getElementById('skill-cards-container');
+        const radarWrapper = document.getElementById('radar-wrapper');
+        const noData = document.getElementById('no-radar-data');
+
+        if (!res.skills_radar || res.skills_radar.length === 0) {
+            noData.classList.remove('hidden');
+            skillCards.innerHTML = '<p class="text-muted text-center mb-0">No assessment records available.</p>';
+            return;
+        }
+
+        radarWrapper.classList.remove('hidden');
+
+        // Radar Chart
+        const ctx = document.getElementById('my-radar-chart').getContext('2d');
+        new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: res.skills_radar.map(s => s.skill),
+                datasets: [{
+                    label: 'Skill Level',
+                    data: res.skills_radar.map(s => s.score),
+                    backgroundColor: 'rgba(13, 110, 253, 0.2)',
+                    borderColor: 'rgba(13, 110, 253, 1)',
+                    pointBackgroundColor: 'rgba(13, 110, 253, 1)'
+                }]
+            },
+            options: {
+                scales: { r: { min: 0, max: 10, ticks: { display: false } } },
+                plugins: { legend: { display: false } },
+                maintainAspectRatio: false
+            }
+        });
+
+        // Skill Detail Cards using exact same markup as Leader dashboard
+        skillCards.innerHTML = res.skills_radar.map(s => `
+            <div class="card mb-2 border shadow-sm">
+                <div class="card-body py-3 px-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-semibold text-dark">${escapeHtml(s.skill)}</span>
+                        <span class="badge fs-6" style="background-color: ${getScoreColor(s.score)};">
+                            ${s.score.toFixed(1)} / 10
+                        </span>
+                    </div>
+                    <div class="progress" style="height: 10px; border-radius: 6px;">
+                        <div class="progress-bar" role="progressbar" 
+                             style="width: ${s.score * 10}%; background-color: ${getScoreColor(s.score)}; border-radius: 6px;"
+                             aria-valuenow="${s.score}" aria-valuemin="0" aria-valuemax="10">
+                        </div>
+                    </div>
+                    <div class="text-end mt-1">
+                        <small class="text-muted">${getScoreLabel(s.score)}</small>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+    } catch (err) {
+        document.getElementById('dashboard-loading').innerHTML = 
+            `<div class="alert alert-danger">Failed to load dashboard: ${err.message}</div>`;
+    }
+});
+</script>
+{% endblock %}

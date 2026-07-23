@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% set hide_navbar = True %}
+
+{% block title %}Login - Skill Matrix{% endblock %}
+
+{% block content %}
+<div class="login-wrapper">
+    <div class="card login-card shadow border-0">
+        <div class="card-header text-center py-4 bg-white border-0">
+            <h4 class="mb-0 text-primary fw-bold">Skill Matrix</h4>
+            <p class="text-muted mb-0 small mt-1">Engineer Skill Assessment System</p>
+        </div>
+        <div class="card-body p-4">
+            <form id="login-form">
+                <div class="mb-3">
+                    <label class="form-label required fw-semibold">Username</label>
+                    <input type="text" class="form-control form-control-lg" id="username" placeholder="leader / engineer1" required>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label required fw-semibold">Password</label>
+                    <input type="password" class="form-control form-control-lg" id="password" placeholder="Enter password" required>
+                </div>
+                <div class="text-end mb-4">
+                    <a href="#" id="forgot-pwd-link" class="text-decoration-none small text-muted">Forgot Password?</a>
+                </div>
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg fw-semibold shadow-sm">Login System</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const token = localStorage.getItem('token');
+    if (token) {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (user.role === 'leader') {
+            window.location.href = '/dashboard';
+        } else if (user.role === 'engineer') {
+            window.location.href = '/engineer';
+        }
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const u = document.getElementById('username').value;
+        const p = document.getElementById('password').value;
+        try {
+            const res = await Api.login(u, p);
+            localStorage.setItem('token', res.token);
+            localStorage.setItem('user', JSON.stringify(res.user));
+            showToast('Login successful');
+            setTimeout(() => {
+                if (res.user.role === 'leader') {
+                    window.location.href = '/dashboard';
+                } else {
+                    window.location.href = '/engineer';
+                }
+            }, 500);
+        } catch (err) {
+            showToast('Login failed: ' + err.message);
+        }
+    });
+
+    document.getElementById('forgot-pwd-link').addEventListener('click', (e) => {
+        e.preventDefault();
+        showToast('Please contact your Leader to reset your password.');
+    });
+});
+</script>
+{% endblock %}
