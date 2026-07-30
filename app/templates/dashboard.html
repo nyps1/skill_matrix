@@ -10,6 +10,24 @@
 {% endblock %}
 
 {% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0 bg-primary bg-gradient text-white">
+            <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap">
+                <div>
+                    <h4 class="fw-bold mb-1">Welcome to Leader Dashboard</h4>
+                    <p class="mb-0 text-white-50">Manage your engineers, skills, and questions from the tabs above, or use the quick links below.</p>
+                </div>
+                <div class="d-flex gap-2 mt-3 mt-md-0">
+                    <a href="/skills" class="btn btn-light fw-semibold text-primary shadow-sm">Manage Skills</a>
+                    <a href="/users" class="btn btn-light fw-semibold text-primary shadow-sm">Manage Users</a>
+                    <a href="/questions" class="btn btn-light fw-semibold text-primary shadow-sm">Question Bank</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0 fw-bold text-dark">Engineer Skill Quantified Radar Charts</h4>
     <div class="form-check form-switch fs-5">
