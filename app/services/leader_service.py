@@ -8,18 +8,14 @@ class LeaderService:
         results = []
         
         for eng in engineers:
-            sessions = AssessmentRepository.get_latest_completed_sessions_per_skill(eng.id)
+            all_sessions = AssessmentRepository.get_all_completed_sessions(eng.id)
             
-            skills_data = []
-            total_score_sum = 0
-            total_score_count = 0
+            trends_by_skill = {}
+            latest_per_skill_map = {}
             
-            for session in sessions:
-                if session.total_score is not None:
-                    total_score_sum += session.total_score
-                    total_score_count += 1
-                    
+            for session in all_sessions:
                 skill_name = session.skill.name if session.skill else 'Unknown'
+                
                 skill_score_sum = 0
                 skill_ans_count = 0
                 for ans in session.answers:
@@ -27,15 +23,39 @@ class LeaderService:
                         skill_score_sum += ans.score
                         skill_ans_count += 1
                         
-                if skill_ans_count > 0:
-                    skills_data.append({'skill': skill_name, 'score': round(skill_score_sum / skill_ans_count, 1)})
+                session_avg_score = round(skill_score_sum / skill_ans_count, 1) if skill_ans_count > 0 else 0
+                
+                if skill_name not in trends_by_skill:
+                    trends_by_skill[skill_name] = []
+                    
+                date_str = session.submitted_at.strftime('%Y-%m-%d %H:%M') if session.submitted_at else 'Unknown'
+                trends_by_skill[skill_name].append({
+                    'date': date_str,
+                    'score': session_avg_score
+                })
+                
+                latest_per_skill_map[skill_name] = {
+                    'session': session,
+                    'avg_score': session_avg_score
+                }
+                
+            skills_data = []
+            total_score_sum = 0
+            total_score_count = 0
+            
+            for skill_name, data in latest_per_skill_map.items():
+                skills_data.append({'skill': skill_name, 'score': data['avg_score']})
+                if data['session'].total_score is not None:
+                    total_score_sum += data['session'].total_score
+                    total_score_count += 1
             
             overall_score = round(total_score_sum / total_score_count, 1) if total_score_count > 0 else None
             
             results.append({
                 'user': eng.to_dict(),
                 'latest_score': overall_score,
-                'skills_radar': skills_data
+                'skills_radar': skills_data,
+                'historical_trends': trends_by_skill
             })
             
         return results

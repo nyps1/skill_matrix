@@ -67,6 +67,13 @@ class AssessmentRepository:
         return list(latest_per_skill.values())
 
     @staticmethod
+    def get_all_completed_sessions(user_id):
+        return ExamSession.query.options(
+            joinedload(ExamSession.answers).joinedload(ExamAnswer.question).joinedload(Question.skill)
+        ).filter(ExamSession.user_id == user_id, ExamSession.status.in_(['submitted', 'graded']))\
+            .order_by(ExamSession.submitted_at.asc()).all()
+
+    @staticmethod
     def get_pending_sessions():
         return ExamSession.query.filter_by(status='submitted').all()
 

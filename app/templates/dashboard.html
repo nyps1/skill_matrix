@@ -111,27 +111,40 @@ function renderCharts() {
                 <div class="card border-0 shadow-sm" style="border-radius: 0 0 14px 14px; margin-top: -1.5rem;">
                     <div class="card-body pt-4">
                         <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">Skill Breakdown for ${escapeHtml(d.user.username)}</h6>
-                        ${d.skills_radar && d.skills_radar.length > 0 ? d.skills_radar.map(s => `
-                            <div class="card mb-2 border shadow-sm">
-                                <div class="card-body py-3 px-4">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span class="fw-semibold text-dark">${escapeHtml(s.skill)}</span>
-                                        <span class="badge fs-6" style="background-color: ${getScoreColor(s.score)};">
-                                            ${s.score.toFixed(1)} / 10
-                                        </span>
-                                    </div>
-                                    <div class="progress" style="height: 10px; border-radius: 6px;">
-                                        <div class="progress-bar" role="progressbar" 
-                                             style="width: ${s.score * 10}%; background-color: ${getScoreColor(s.score)}; border-radius: 6px;"
-                                             aria-valuenow="${s.score}" aria-valuemin="0" aria-valuemax="10">
+                        <div class="row">
+                            <div class="col-md-5">
+                                <h6 class="fw-bold text-secondary mb-3">Latest Scores</h6>
+                                ${d.skills_radar && d.skills_radar.length > 0 ? d.skills_radar.map(s => `
+                                    <div class="card mb-2 border shadow-sm">
+                                        <div class="card-body py-3 px-4">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="fw-semibold text-dark">${escapeHtml(s.skill)}</span>
+                                                <span class="badge fs-6" style="background-color: ${getScoreColor(s.score)};">
+                                                    ${s.score.toFixed(1)} / 10
+                                                </span>
+                                            </div>
+                                            <div class="progress" style="height: 10px; border-radius: 6px;">
+                                                <div class="progress-bar" role="progressbar" 
+                                                     style="width: ${s.score * 10}%; background-color: ${getScoreColor(s.score)}; border-radius: 6px;"
+                                                     aria-valuenow="${s.score}" aria-valuemin="0" aria-valuemax="10">
+                                                </div>
+                                            </div>
+                                            <div class="text-end mt-1">
+                                                <small class="text-muted">${getScoreLabel(s.score)}</small>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="text-end mt-1">
-                                        <small class="text-muted">${getScoreLabel(s.score)}</small>
-                                    </div>
-                                </div>
+                                `).join('') : '<p class="text-muted text-center mb-0">No assessment records for this engineer.</p>'}
                             </div>
-                        `).join('') : '<p class="text-muted text-center mb-0">No assessment records for this engineer.</p>'}
+                            <div class="col-md-7">
+                                <h6 class="fw-bold text-secondary mb-3">Historical Trends</h6>
+                                ${d.historical_trends && Object.keys(d.historical_trends).length > 0 ? `
+                                    <div style="height: 350px;">
+                                        <canvas id="trend-${d.user.id}"></canvas>
+                                    </div>
+                                ` : '<p class="text-muted text-center mt-5">No historical data available.</p>'}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -142,7 +155,7 @@ function renderCharts() {
     filtered.forEach(d => {
         if (d.skills_radar && d.skills_radar.length > 0) {
             const ctx = document.getElementById(`radar-${d.user.id}`).getContext('2d');
-            chartInstances[d.user.id] = new Chart(ctx, {
+            chartInstances[`radar-${d.user.id}`] = new Chart(ctx, {
                 type: 'radar',
                 data: {
                     labels: d.skills_radar.map(s => s.skill),
@@ -160,6 +173,53 @@ function renderCharts() {
                     maintainAspectRatio: false
                 }
             });
+            
+            // Historical Trends Chart
+            if (d.historical_trends && Object.keys(d.historical_trends).length > 0) {
+                const trendCtx = document.getElementById(`trend-${d.user.id}`).getContext('2d');
+                
+                const datasets = [];
+                const colors = ['#0d6efd', '#198754', '#fd7e14', '#dc3545', '#6f42c1', '#20c997', '#0dcaf0'];
+                let colorIdx = 0;
+                
+                const allDatesSet = new Set();
+                Object.values(d.historical_trends).forEach(arr => {
+                    arr.forEach(pt => allDatesSet.add(pt.date));
+                });
+                const labels = Array.from(allDatesSet).sort();
+                
+                for (const [skill, history] of Object.entries(d.historical_trends)) {
+                    const dataPoints = labels.map(dateLabel => {
+                        const pt = history.find(h => h.date === dateLabel);
+                        return pt ? pt.score : null;
+                    });
+                    
+                    datasets.push({
+                        label: skill,
+                        data: dataPoints,
+                        borderColor: colors[colorIdx % colors.length],
+                        backgroundColor: colors[colorIdx % colors.length],
+                        tension: 0.3,
+                        spanGaps: true
+                    });
+                    colorIdx++;
+                }
+
+                chartInstances[`trend-${d.user.id}`] = new Chart(trendCtx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: datasets
+                    },
+                    options: {
+                        scales: { y: { min: 0, max: 10 } },
+                        plugins: { 
+                            legend: { position: 'bottom' }
+                        },
+                        maintainAspectRatio: false
+                    }
+                });
+            }
         }
     });
 }
