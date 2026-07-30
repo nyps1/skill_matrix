@@ -9,33 +9,88 @@
 {% endblock %}
 
 {% block content %}
-<h4 class="mb-4 fw-bold text-dark">Skill Assessments</h4>
+<h4 class="mb-4 fw-bold text-dark">Available Skill Assessments</h4>
+<p class="text-muted mb-4">Select a skill to begin testing. Assessments are auto-saved so you can resume them at any time. You cannot test on skills that you are authorized to create questions for.</p>
 
-<div class="card text-center p-5 shadow border-0">
-    <div class="card-body">
-        <h5 class="card-title mb-4 fw-bold fs-3 text-primary">Ready to Take Your Skill Assessment?</h5>
-        <p class="card-text text-muted mb-4 fs-5">
-            This assessment features auto-save functionality. If interrupted, you can resume at any time.
-        </p>
-        <button id="btn-start-exam" class="btn btn-primary btn-lg px-5 py-3 shadow-sm rounded-pill fw-semibold">
-            Start / Resume Assessment
-        </button>
-    </div>
+<div id="exams-loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+</div>
+
+<div id="exams-container" class="row hidden">
+    <!-- Exam cards injected here -->
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('btn-start-exam').addEventListener('click', async () => {
-        try {
-            const res = await Api.startExam();
-            localStorage.setItem('currentExamSessionId', res.session_id);
-            window.location.href = '/exam';
-        } catch (err) {
-            showToast('Unable to start assessment: ' + err.message);
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const exams = await Api.getAvailableExams();
+        document.getElementById('exams-loading').classList.add('hidden');
+        const container = document.getElementById('exams-container');
+        container.classList.remove('hidden');
+
+        if (exams.length === 0) {
+            container.innerHTML = '<div class="col-12 text-center text-muted">No skills available in the system.</div>';
+            return;
         }
-    });
+
+        container.innerHTML = exams.map(exam => {
+            let badge = '';
+            let btnClass = 'btn-primary';
+            let btnText = 'Start Assessment';
+            let btnAction = `onclick="startExam(${exam.skill_id})"`;
+            let disabled = '';
+
+            if (exam.status === 'author') {
+                badge = '<span class="badge bg-secondary mb-2">Author (Not Eligible)</span>';
+                btnClass = 'btn-secondary';
+                btnText = 'Not Available';
+                disabled = 'disabled';
+            } else if (exam.status === 'no_questions') {
+                badge = '<span class="badge bg-warning text-dark mb-2">0 Questions Available</span>';
+                btnClass = 'btn-outline-secondary';
+                btnText = 'No Questions';
+                disabled = 'disabled';
+            } else if (exam.status === 'draft') {
+                badge = '<span class="badge bg-info text-dark mb-2">In Progress</span>';
+                btnClass = 'btn-warning';
+                btnText = 'Resume Draft';
+            }
+
+            return `
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100 shadow-sm border-0 dashboard-card">
+                    <div class="card-body d-flex flex-column text-center p-4">
+                        <div class="mb-auto">
+                            ${badge}
+                            <h5 class="card-title fw-bold text-dark mt-2">${escapeHtml(exam.skill_name)}</h5>
+                            <p class="text-muted small">${exam.question_count} Questions</p>
+                        </div>
+                        <div class="mt-4">
+                            <button class="btn ${btnClass} w-100 rounded-pill fw-semibold shadow-sm" ${disabled} ${btnAction}>
+                                ${btnText}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+
+    } catch (err) {
+        document.getElementById('exams-loading').innerHTML = 
+            `<div class="alert alert-danger">Failed to load available exams: ${err.message}</div>`;
+    }
 });
+
+async function startExam(skillId) {
+    try {
+        const res = await Api.startExam(skillId);
+        localStorage.setItem('currentExamSessionId', res.session_id);
+        window.location.href = '/exam';
+    } catch (err) {
+        showToast('Unable to start assessment: ' + err.message);
+    }
+}
 </script>
 {% endblock %}

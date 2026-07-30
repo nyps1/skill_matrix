@@ -46,14 +46,28 @@ def update_question(current_user, question_id):
     except ValueError as e:
         return jsonify({'message': str(e)}), 403
 
+@assessment_bp.route('/available_exams', methods=['GET'])
+@token_required
+def get_available_exams(current_user):
+    # Allow both engineers and leaders to view available exams
+    
+    available = AssessmentService.get_available_exams(current_user)
+    return jsonify(available), 200
+
 @assessment_bp.route('/exams/start', methods=['POST'])
 @token_required
 def start_exam(current_user):
-    if current_user.role != 'engineer':
-        return jsonify({'message': 'Only engineers can take exams'}), 403
+    # Allow both engineers and leaders to start exams for testing
+    data = request.get_json()
+    skill_id = data.get('skill_id')
+    if not skill_id:
+        return jsonify({'message': 'skill_id is required'}), 400
         
-    session = AssessmentService.start_or_resume_exam(current_user.id)
-    return jsonify({'session_id': session.id, 'status': session.status}), 201
+    try:
+        session = AssessmentService.start_or_resume_exam(current_user.id, skill_id)
+        return jsonify({'session_id': session.id, 'status': session.status}), 201
+    except ValueError as e:
+        return jsonify({'message': str(e)}), 400
 
 @assessment_bp.route('/exams/<int:session_id>/questions', methods=['GET'])
 @token_required
@@ -87,35 +101,44 @@ def submit_exam(current_user, session_id):
 @token_required
 def my_dashboard(current_user):
     """Return the current engineer's own skill radar data."""
-    latest_session = AssessmentRepository.get_latest_graded_session(current_user.id)
-    score = latest_session.total_score if latest_session else None
-
+    sessions = AssessmentRepository.get_latest_completed_sessions_per_skill(current_user.id)
+    
     skills_data = []
-    if latest_session:
-        skill_scores = {}
-        for ans in latest_session.answers:
-            skill_name = ans.question.skill.name
-            if skill_name not in skill_scores:
-                skill_scores[skill_name] = {'total': 0, 'count': 0}
+    total_score_sum = 0
+    total_score_count = 0
+    latest_submitted_at = None
+
+    for session in sessions:
+        if session.total_score is not None:
+            total_score_sum += session.total_score
+            total_score_count += 1
+            
+        # Keep track of the absolute latest submission time
+        if session.submitted_at:
+            if latest_submitted_at is None or session.submitted_at > latest_submitted_at:
+                latest_submitted_at = session.submitted_at
+
+        # Calculate score for this skill session
+        skill_name = session.skill.name if session.skill else 'Unknown'
+        skill_score_sum = 0
+        skill_ans_count = 0
+        for ans in session.answers:
             if ans.score is not None:
-                skill_scores[skill_name]['total'] += ans.score
-                skill_scores[skill_name]['count'] += 1
+                skill_score_sum += ans.score
+                skill_ans_count += 1
+                
+        if skill_ans_count > 0:
+            skills_data.append({
+                'skill': skill_name,
+                'score': round(skill_score_sum / skill_ans_count, 1)
+            })
 
-        for s_name, data in skill_scores.items():
-            if data['count'] > 0:
-                skills_data.append({
-                    'skill': s_name,
-                    'score': round(data['total'] / data['count'], 1)
-                })
-
-    submitted_at = None
-    if latest_session and latest_session.submitted_at:
-        submitted_at = latest_session.submitted_at.isoformat()
-
+    overall_score = round(total_score_sum / total_score_count, 1) if total_score_count > 0 else None
+    
     return jsonify({
         'user': current_user.to_dict(),
-        'latest_score': score,
-        'submitted_at': submitted_at,
+        'latest_score': overall_score,
+        'submitted_at': latest_submitted_at.isoformat() if latest_submitted_at else None,
         'skills_radar': skills_data
     }), 200
 

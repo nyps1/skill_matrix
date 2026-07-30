@@ -66,8 +66,42 @@ class AssessmentService:
         )
 
     @staticmethod
-    def start_or_resume_exam(user_id):
-        return AssessmentRepository.get_or_create_draft_session(user_id)
+    def start_or_resume_exam(user_id, skill_id):
+        # Validate that skill_id has questions
+        from app.models.assessment import Question
+        q_count = Question.query.filter_by(skill_id=skill_id).count()
+        if q_count == 0:
+            raise ValueError("No questions available for this skill")
+        return AssessmentRepository.get_or_create_draft_session(user_id, skill_id)
+
+    @staticmethod
+    def get_available_exams(current_user):
+        skills = AssessmentRepository.get_all_skills()
+        authorized_ids = [s.id for s in current_user.authorized_skills]
+        
+        from app.models.assessment import Question, ExamSession
+        
+        available = []
+        for s in skills:
+            q_count = Question.query.filter_by(skill_id=s.id).count()
+            draft = ExamSession.query.filter_by(user_id=current_user.id, skill_id=s.id, status='draft').first()
+            
+            status = 'available'
+            if s.id in authorized_ids:
+                status = 'author'
+            elif q_count == 0:
+                status = 'no_questions'
+            elif draft:
+                status = 'draft'
+                
+            available.append({
+                'skill_id': s.id,
+                'skill_name': s.name,
+                'question_count': q_count,
+                'status': status,
+                'draft_id': draft.id if draft else None
+            })
+        return available
 
     @staticmethod
     def get_exam_questions(session_id, user_id):

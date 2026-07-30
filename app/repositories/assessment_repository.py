@@ -54,27 +54,33 @@ class AssessmentRepository:
         return ExamSession.query.get(session_id)
 
     @staticmethod
-    def get_latest_graded_session(user_id):
-        return ExamSession.query.options(
+    def get_latest_completed_sessions_per_skill(user_id):
+        sessions = ExamSession.query.options(
             joinedload(ExamSession.answers).joinedload(ExamAnswer.question).joinedload(Question.skill)
-        ).filter_by(user_id=user_id, status='graded')\
-            .order_by(ExamSession.submitted_at.desc()).first()
+        ).filter(ExamSession.user_id == user_id, ExamSession.status.in_(['submitted', 'graded']))\
+            .order_by(ExamSession.submitted_at.desc()).all()
+            
+        latest_per_skill = {}
+        for session in sessions:
+            if session.skill_id not in latest_per_skill:
+                latest_per_skill[session.skill_id] = session
+        return list(latest_per_skill.values())
 
     @staticmethod
     def get_pending_sessions():
         return ExamSession.query.filter_by(status='submitted').all()
 
     @staticmethod
-    def get_or_create_draft_session(user_id):
+    def get_or_create_draft_session(user_id, skill_id):
         import sqlalchemy.exc
-        session = ExamSession.query.filter_by(user_id=user_id, status='draft').first()
+        session = ExamSession.query.filter_by(user_id=user_id, skill_id=skill_id, status='draft').first()
         if not session:
             try:
-                session = ExamSession(user_id=user_id)
+                session = ExamSession(user_id=user_id, skill_id=skill_id)
                 db.session.add(session)
                 db.session.commit()
                 
-                questions = Question.query.all()
+                questions = Question.query.filter_by(skill_id=skill_id).all()
                 for q in questions:
                     ans = ExamAnswer(session_id=session.id, question_id=q.id)
                     db.session.add(ans)
@@ -82,7 +88,7 @@ class AssessmentRepository:
             except sqlalchemy.exc.IntegrityError:
                 # Caught a race condition where another draft was created simultaneously
                 db.session.rollback()
-                session = ExamSession.query.filter_by(user_id=user_id, status='draft').first()
+                session = ExamSession.query.filter_by(user_id=user_id, skill_id=skill_id, status='draft').first()
         return session
 
     @staticmethod

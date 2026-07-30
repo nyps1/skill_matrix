@@ -32,8 +32,10 @@ let autosaveInterval = null;
 
 async function loadExam() {
     try {
-        const res = await Api.startExam();
-        currentSessionId = res.session_id;
+        currentSessionId = localStorage.getItem('currentExamSessionId');
+        if (!currentSessionId) {
+            throw new Error("No active exam session found. Please return to the Assessments page and select a skill.");
+        }
 
         const questions = await Api.getExamQuestions(currentSessionId);
         renderQuestions(questions);

@@ -8,27 +8,33 @@ class LeaderService:
         results = []
         
         for eng in engineers:
-            latest_session = AssessmentRepository.get_latest_graded_session(eng.id)
-            score = latest_session.total_score if latest_session else None
+            sessions = AssessmentRepository.get_latest_completed_sessions_per_skill(eng.id)
             
             skills_data = []
-            if latest_session:
-                skill_scores = {}
-                for ans in latest_session.answers:
-                    skill_name = ans.question.skill.name
-                    if skill_name not in skill_scores:
-                        skill_scores[skill_name] = {'total': 0, 'count': 0}
-                    if ans.score is not None:
-                        skill_scores[skill_name]['total'] += ans.score
-                        skill_scores[skill_name]['count'] += 1
-                
-                for s_name, data in skill_scores.items():
-                    if data['count'] > 0:
-                        skills_data.append({'skill': s_name, 'score': data['total'] / data['count']})
+            total_score_sum = 0
+            total_score_count = 0
+            
+            for session in sessions:
+                if session.total_score is not None:
+                    total_score_sum += session.total_score
+                    total_score_count += 1
                     
+                skill_name = session.skill.name if session.skill else 'Unknown'
+                skill_score_sum = 0
+                skill_ans_count = 0
+                for ans in session.answers:
+                    if ans.score is not None:
+                        skill_score_sum += ans.score
+                        skill_ans_count += 1
+                        
+                if skill_ans_count > 0:
+                    skills_data.append({'skill': skill_name, 'score': round(skill_score_sum / skill_ans_count, 1)})
+            
+            overall_score = round(total_score_sum / total_score_count, 1) if total_score_count > 0 else None
+            
             results.append({
                 'user': eng.to_dict(),
-                'latest_score': score,
+                'latest_score': overall_score,
                 'skills_radar': skills_data
             })
             

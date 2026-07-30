@@ -136,8 +136,15 @@ class Api {
     }
 
     // --- Assessment APIs (Exams) ---
-    static async startExam() {
-        return this.request('/assessment/exams/start', { method: 'POST' });
+    static async getAvailableExams() {
+        return this.request('/assessment/available_exams');
+    }
+
+    static async startExam(skillId) {
+        return this.request('/assessment/exams/start', {
+            method: 'POST',
+            body: { skill_id: skillId }
+        });
     }
 
     static async getExamQuestions(sessionId) {
