@@ -13,6 +13,18 @@ def create_app():
 
     # Initialize Extensions
     db.init_app(app)
+    
+    # Enable SQLite WAL Mode for concurrency
+    if app.config['SQLALCHEMY_DATABASE_URI'].startswith('sqlite'):
+        from sqlalchemy import event
+        from sqlalchemy.engine import Engine
+        
+        @event.listens_for(Engine, "connect")
+        def set_sqlite_pragma(dbapi_connection, connection_record):
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA synchronous=NORMAL")
+            cursor.close()
 
     # Register API Blueprints
     from app.routes.auth_routes import auth_bp
@@ -75,8 +87,13 @@ def create_app():
 
 def setup_database(app):
     from app.models.user import User
+    from app.models.assessment import ExamSession
     with app.app_context():
         db.create_all()
+        # Create unique partial index to prevent race conditions (only 1 draft session per user)
+        db.session.execute(db.text("CREATE UNIQUE INDEX IF NOT EXISTS idx_user_draft_session ON exam_sessions (user_id) WHERE status = 'draft'"))
+        db.session.commit()
+        
         if not User.query.filter_by(username='leader').first():
             hashed = bcrypt.hashpw('password'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             leader_user = User(username='leader', password_hash=hashed, role='leader')

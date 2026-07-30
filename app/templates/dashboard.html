@@ -28,6 +28,7 @@
 {% block scripts %}
 <script>
 let dashboardData = [];
+let chartInstances = {};
 
 function getScoreColor(score) {
     if (score >= 8) return '#198754';
@@ -54,6 +55,10 @@ function renderCharts() {
         container.innerHTML = `<div class="col-12 text-center text-muted my-5">No engineer data matches the criteria.</div>`;
         return;
     }
+
+    // Destroy old charts to prevent memory leaks
+    Object.values(chartInstances).forEach(chart => chart.destroy());
+    chartInstances = {};
 
     container.innerHTML = filtered.map(d => `
         <div class="col-md-6 col-lg-4 mb-4">
@@ -115,7 +120,7 @@ function renderCharts() {
     filtered.forEach(d => {
         if (d.skills_radar && d.skills_radar.length > 0) {
             const ctx = document.getElementById(`radar-${d.user.id}`).getContext('2d');
-            new Chart(ctx, {
+            chartInstances[d.user.id] = new Chart(ctx, {
                 type: 'radar',
                 data: {
                     labels: d.skills_radar.map(s => s.skill),

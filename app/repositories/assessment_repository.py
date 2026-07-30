@@ -1,3 +1,4 @@
+from sqlalchemy.orm import joinedload
 from app.models.assessment import Question, ExamSession, ExamAnswer
 from app.models.skill import SkillCategory
 from app.extensions import db
@@ -54,7 +55,9 @@ class AssessmentRepository:
 
     @staticmethod
     def get_latest_graded_session(user_id):
-        return ExamSession.query.filter_by(user_id=user_id, status='graded')\
+        return ExamSession.query.options(
+            joinedload(ExamSession.answers).joinedload(ExamAnswer.question).joinedload(Question.skill)
+        ).filter_by(user_id=user_id, status='graded')\
             .order_by(ExamSession.submitted_at.desc()).first()
 
     @staticmethod
@@ -63,17 +66,23 @@ class AssessmentRepository:
 
     @staticmethod
     def get_or_create_draft_session(user_id):
+        import sqlalchemy.exc
         session = ExamSession.query.filter_by(user_id=user_id, status='draft').first()
         if not session:
-            session = ExamSession(user_id=user_id)
-            db.session.add(session)
-            db.session.commit()
-            
-            questions = Question.query.all()
-            for q in questions:
-                ans = ExamAnswer(session_id=session.id, question_id=q.id)
-                db.session.add(ans)
-            db.session.commit()
+            try:
+                session = ExamSession(user_id=user_id)
+                db.session.add(session)
+                db.session.commit()
+                
+                questions = Question.query.all()
+                for q in questions:
+                    ans = ExamAnswer(session_id=session.id, question_id=q.id)
+                    db.session.add(ans)
+                db.session.commit()
+            except sqlalchemy.exc.IntegrityError:
+                # Caught a race condition where another draft was created simultaneously
+                db.session.rollback()
+                session = ExamSession.query.filter_by(user_id=user_id, status='draft').first()
         return session
 
     @staticmethod
@@ -88,10 +97,14 @@ class AssessmentRepository:
 
     @staticmethod
     def update_answers(session_id, answers_data):
+        # Fetch all answers for this session in a single query
+        answers = ExamAnswer.query.filter_by(session_id=session_id).all()
+        answer_map = {ans.id: ans for ans in answers}
+        
         for data in answers_data:
-            ans = ExamAnswer.query.get(data['answer_id'])
-            if ans and ans.session_id == session_id:
-                ans.provided_answer = data['provided_answer']
+            ans_id = data.get('answer_id')
+            if ans_id in answer_map:
+                answer_map[ans_id].provided_answer = data.get('provided_answer')
         db.session.commit()
 
     @staticmethod
