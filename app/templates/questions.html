@@ -39,13 +39,19 @@
                     <label class="form-label required fw-semibold">Question Content</label>
                     <textarea class="form-control" id="q-content" rows="3" placeholder="Enter full question content" required></textarea>
                 </div>
-                <div class="col-md-6" id="options-container">
-                    <label class="form-label fw-semibold">Options (JSON Array format)</label>
-                    <input type="text" class="form-control" id="q-options" placeholder='["Option A", "Option B", "Option C"]'>
+                <div class="col-12" id="options-container">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label fw-semibold mb-0">Multiple Choice Options & Standard Answer</label>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-add-option">＋ Add Option</button>
+                    </div>
+                    <div id="dynamic-options-list" class="d-flex flex-column gap-2">
+                        <!-- Options injected here -->
+                    </div>
+                    <small class="text-muted mt-1 d-block">Select the radio button next to the option to mark it as the correct answer.</small>
                 </div>
-                <div class="col-md-6" id="answer-container">
+                <div class="col-12 hidden" id="answer-container">
                     <label class="form-label required fw-semibold">Standard Answer</label>
-                    <input type="text" class="form-control" id="q-answer" placeholder="Enter standard answer" required>
+                    <textarea class="form-control" id="q-answer-open" rows="2" placeholder="Enter standard answer (for open-ended)"></textarea>
                 </div>
                 <div class="col-12 mt-3">
                     <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btn-submit-q">Submit Question</button>
@@ -75,6 +81,43 @@ let skillsList = [];
 let allQuestions = [];
 let editingQuestionId = null;
 
+let optionCount = 0;
+
+function createOptionRow(val = '', isCorrect = false) {
+    optionCount++;
+    const id = `opt-${optionCount}`;
+    const row = document.createElement('div');
+    row.className = 'input-group option-row';
+    row.innerHTML = `
+        <div class="input-group-text bg-white">
+            <input class="form-check-input mt-0 correct-answer-radio" type="radio" name="correct_option" value="${id}" ${isCorrect ? 'checked' : ''} required>
+        </div>
+        <input type="text" class="form-control option-input" placeholder="Option text" value="${escapeHtml(val)}" required>
+        <button class="btn btn-outline-danger btn-remove-option" type="button"><i class="bi bi-trash"></i></button>
+    `;
+    
+    row.querySelector('.btn-remove-option').addEventListener('click', () => {
+        row.remove();
+    });
+    
+    return row;
+}
+
+function renderOptions(optionsArr = [], answerStr = '') {
+    const list = document.getElementById('dynamic-options-list');
+    list.innerHTML = '';
+    optionCount = 0;
+    
+    if (!optionsArr || optionsArr.length === 0) {
+        list.appendChild(createOptionRow('', true));
+        list.appendChild(createOptionRow(''));
+    } else {
+        optionsArr.forEach(opt => {
+            list.appendChild(createOptionRow(opt, opt === answerStr));
+        });
+    }
+}
+
 async function initPage() {
     try {
         const [skills, questions] = await Promise.all([
@@ -99,14 +142,7 @@ async function initPage() {
             renderQuestionsForSelectedSkill();
         });
 
-        document.getElementById('q-type').addEventListener('change', (e) => {
-            const optsCol = document.getElementById('options-container');
-            if (e.target.value === 'multiple_choice') {
-                optsCol.classList.remove('d-none');
-            } else {
-                optsCol.classList.add('d-none');
-            }
-        });
+
 
     } catch (err) {
         document.getElementById('questions-list-container').innerHTML = 
@@ -183,8 +219,13 @@ function renderQuestionsForSelectedSkill() {
             document.getElementById('q-skill').value = q.skill_id;
             document.getElementById('q-type').value = q.type;
             document.getElementById('q-content').value = q.content;
-            document.getElementById('q-options').value = q.options ? JSON.stringify(q.options) : '';
-            document.getElementById('q-answer').value = q.answer;
+            if (q.type === 'multiple_choice') {
+                renderOptions(q.options, q.answer);
+                document.getElementById('q-type').dispatchEvent(new Event('change'));
+            } else {
+                document.getElementById('q-answer-open').value = q.answer;
+                document.getElementById('q-type').dispatchEvent(new Event('change'));
+            }
 
             document.getElementById('form-title').textContent = `Edit Question Q${qid}`;
             document.getElementById('btn-submit-q').textContent = 'Update Question';
@@ -200,8 +241,10 @@ function cancelEditing() {
     editingQuestionId = null;
     document.getElementById('editing-q-id').value = '';
     document.getElementById('q-content').value = '';
-    document.getElementById('q-options').value = '';
-    document.getElementById('q-answer').value = '';
+    renderOptions(); // reset options
+    document.getElementById('q-answer-open').value = '';
+    document.getElementById('q-type').value = 'multiple_choice';
+    document.getElementById('q-type').dispatchEvent(new Event('change'));
     document.getElementById('form-title').textContent = 'Create New Question';
     document.getElementById('btn-submit-q').textContent = 'Submit Question';
     document.getElementById('btn-submit-q').className = 'btn btn-primary px-4 fw-semibold';
@@ -215,27 +258,58 @@ document.addEventListener('DOMContentLoaded', () => {
         cancelEditing();
     });
 
+    document.getElementById('btn-add-option').addEventListener('click', () => {
+        document.getElementById('dynamic-options-list').appendChild(createOptionRow());
+    });
+    
+    document.getElementById('q-type').addEventListener('change', (e) => {
+        if(e.target.value === 'multiple_choice') {
+            document.getElementById('options-container').classList.remove('hidden');
+            document.getElementById('answer-container').classList.add('hidden');
+            document.getElementById('q-answer-open').removeAttribute('required');
+        } else {
+            document.getElementById('options-container').classList.add('hidden');
+            document.getElementById('answer-container').classList.remove('hidden');
+            document.getElementById('q-answer-open').setAttribute('required', 'required');
+        }
+    });
+
+    // Initialize defaults
+    renderOptions();
+    document.getElementById('q-type').dispatchEvent(new Event('change'));
+
     document.getElementById('question-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const skill_id = parseInt(document.getElementById('q-skill').value);
         const type = document.getElementById('q-type').value;
         const content = document.getElementById('q-content').value;
-        const optionsText = document.getElementById('q-options').value;
-        const answer = document.getElementById('q-answer').value;
-
-        if (!skill_id) {
-            showToast('Please select a skill category');
-            return;
-        }
-
         let options = null;
+        let answer = '';
+        
         if (type === 'multiple_choice') {
-            try {
-                options = JSON.parse(optionsText);
-            } catch (err) {
-                showToast('Options format error: Must be valid JSON string array, e.g. ["A", "B"]');
+            const rows = document.querySelectorAll('.option-row');
+            options = Array.from(rows).map(row => row.querySelector('.option-input').value.trim());
+            
+            if (options.length < 2) {
+                showToast('Please provide at least 2 options for Multiple Choice.');
                 return;
             }
+            if (options.some(opt => opt === '')) {
+                showToast('Options cannot be empty.');
+                return;
+            }
+            
+            const checkedRadio = document.querySelector('.correct-answer-radio:checked');
+            if (!checkedRadio) {
+                showToast('Please select a correct answer by clicking a radio button.');
+                return;
+            }
+            
+            const checkedRow = checkedRadio.closest('.option-row');
+            answer = checkedRow.querySelector('.option-input').value.trim();
+            
+        } else {
+            answer = document.getElementById('q-answer-open').value.trim();
         }
 
         const payload = { skill_id, type, content, options, answer };
