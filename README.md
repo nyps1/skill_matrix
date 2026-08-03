@@ -1,57 +1,70 @@
 # Engineer Skill Assessment System
 
-這是一個為企業內部工程師設計的「技能量化與出題測驗系統」。系統分為 Leader 與 Engineer 兩種角色，旨在協助團隊追蹤、量化工程師的各項技術能力，並允許擁有特定技能出題權限的工程師擴充題庫。
+這是一個專為企業內部量身打造的**「工程師技能量化與追蹤系統」**。本系統旨在協助技術主管 (Leader) 精準掌握團隊成員的技術堆疊與成長軌跡，同時賦予資深工程師 (Engineer) 貢獻題庫的權限，建立公司內部的知識與技術標準。
 
-## 系統核心功能
+## 🌟 系統亮點與商業價值
 
-1. **角色與權限隔離 (Role-Based Access Control)**
-   - **Leader**: 具備最高權限。可以建立技能分類、管理題庫、檢視所有工程師的量化雷達圖、以及強制重設工程師密碼。
-   - **Engineer**: 可以進行已分配的技能測驗、檢視自身的專屬雷達圖。若被授予特定技能的「出題權限」，則可以進入出題模式貢獻題庫。
+1. **宏觀與微觀的雙重視角 (Leader Dashboard)**
+   - **個人能力雷達圖**：將抽象的技術能力具象化，一眼看穿員工的「T型」或「通才」特質。
+   - **歷史成長軌跡**：獨家「折線圖」趨勢分析，記錄員工每一次的測驗成績，讓主管能具體看到員工在特定技能 (如 React, AWS) 上一年來的進步，作為績效考核的強力佐證。
+   - **即時過濾與搜尋**：內建依賴名稱與技能的快速篩選器，讓您從上百位員工中瞬間找出「懂 Kubernetes」的人才，大幅提升專案指派效率。
 
-2. **動態能力量化 (Quantified Skill Matrix)**
-   - 使用 Chart.js 將測驗結果轉換為動態雷達圖。
-   - Leader 可透過儀表板一次檢視所有工程師的能力分佈，並支援點擊卡片無縫展開詳細技能分數。
-   - Engineer 擁有專屬的儀表板，專注於自身的技能成長。
+2. **角色權限隔離 (Role-Based Access Control)**
+   - **Leader**: 具備最高權限，可一覽全公司人才庫、建立新技術分類、並強制管理員工帳號。
+   - **Engineer**: 擁有個人專屬儀表板追蹤自我成長。若具備出題權限，可使用「動態新增選項」的防呆介面輕鬆擴充題庫。
 
-3. **Multi-Page Application 架構 (MPA)**
-   - 後端使用 Flask，透過 Jinja2 模板引擎進行頁面渲染，確保各功能（儀表板、題庫管理、使用者管理）在獨立路由下運作。
-   - 提供 `/api` 端點進行所有資料互動（如登入、出題、交卷），達到前後端邏輯解耦。
+3. **企業級資安與穩定性**
+   - 全面採用 **Bcrypt** 高強度密碼雜湊，確保員工登入資訊安全無虞。
+   - 基於 MPA (Multi-Page Application) 架構與 SQLite WAL 模式，支援高併發的讀寫情境。
+   - 自動儲存 (Auto-save) 測驗進度機制，避免突發狀況導致考試心血白費。
 
-4. **測驗與題庫管理**
-   - 支援自動儲存 (Auto-save) 功能，工程師若中斷測驗，下次登入可無縫接續。
-   - 題庫提供「單選題」與「簡答題」，並支援 Inline-editing，方便即時修正題目內容。
+## 🛠️ 環境與技術堆疊
 
-## 環境依賴 (Dependencies)
+- **後端**: Python 3.10+, Flask, SQLAlchemy (ORM)
+- **前端**: HTML5, Bootstrap 5, Chart.js (資料視覺化)
+- **資料庫**: SQLite (WAL mode)
+- **部署**: 可無縫對接 Docker 或雲端平台 (詳見 `MAINTENANCE.md`)
 
-請參考 `MAINTENANCE.md` 中詳細的環境設定與交接指南。
+---
 
-## 快速啟動指南
+## 🚀 快速展示指南 (Demo Guide)
 
-1. **安裝環境與依賴** (請確保系統已安裝 Python 3.10+)：
-   ```bash
-   pip install -r requirements.txt
-   ```
-2. **啟動伺服器**：
-   ```bash
-   python run.py
-   ```
-3. **瀏覽器訪問**：
-   開啟 `http://127.0.0.1:5000/`
+本專案已內建強大的資料生成腳本，只需幾秒鐘即可模擬百人規模的企業環境供主管檢視。
 
-4. **預設測試帳號**：
-   - **Leader**: `帳號: leader` / `密碼: password`
-   - **Engineer**: `帳號: engineer1` / `密碼: password`
+### 1. 安裝與初始化
+請確保您的系統已安裝 Python 3.10+。
+```bash
+pip install -r requirements.txt
+```
 
-## 專案結構
+### 2. 生成百人模擬數據 (可選，但推薦用於 Demo)
+執行以下指令，系統將自動生成 100 位工程師、超過 10 種技術能力、以及豐富的歷史測驗軌跡：
+```bash
+python scripts/seed_100.py
+```
 
-- `app/`
-  - `__init__.py` : Flask App Factory，包含所有頁面路由
-  - `extensions.py` : 初始化 SQLAlchemy 等擴充套件
-  - `models/` : 資料庫模型 (User, Skill, Question, AssessmentSession, Answer)
-  - `routes/` : API 路由控制器 (auth, admin, assessment)
-  - `services/` : 業務邏輯層
-  - `repositories/` : 資料庫存取層 (Data Access Layer)
-  - `templates/` : Jinja2 HTML 模板
-  - `static/` : 靜態資源 (CSS, JS)
-- `run.py` : 程式進入點
-- `skill_assessment.db` : SQLite 本機資料庫 (開發測試用)
+### 3. 啟動伺服器
+```bash
+python run.py
+```
+
+### 4. 登入系統體驗
+開啟瀏覽器前往 `http://127.0.0.1:5000/`
+
+**主管帳號 (推薦登入此帳號以檢視雷達圖與成長軌跡)：**
+- 帳號: `leader`
+- 密碼: `1234`
+
+**工程師帳號 (可用於體驗考試流程)：**
+- 帳號: `engineer_001` (或是 001 到 100 任意數字)
+- 密碼: `1234`
+
+---
+
+## 📁 專案結構 (Project Structure)
+
+- `app/` : 核心應用程式邏輯 (MVC 架構)
+- `scripts/` : 維運與開發輔助腳本 (如 `seed_100.py`、`reset_passwords.py`)
+- `run.py` : 伺服器啟動入口
+- `README.md` : 專案說明與展示指南
+- `MAINTENANCE.md` : 開發者維護交接文件
