@@ -101,8 +101,8 @@ def setup_database(app):
         if not User.query.filter_by(role='leader').first():
             hashed = bcrypt.hashpw('password'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             
-            # Create a default admin user
-            admin = User(username='admin', password_hash=hashed, role='leader')
-            db.session.add(admin)
+            # Create a default leader user
+            leader_user = User(username='leader', password_hash=hashed, role='leader')
+            db.session.add(leader_user)
             db.session.commit()
-            print("Database initialized with default admin user.")
+            print("Database initialized with default leader user.")
