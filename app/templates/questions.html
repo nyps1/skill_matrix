@@ -303,10 +303,14 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('options-container').classList.remove('hidden');
             document.getElementById('answer-container').classList.add('hidden');
             document.getElementById('q-answer-open').removeAttribute('required');
+            document.querySelectorAll('.option-input').forEach(el => el.setAttribute('required', 'required'));
+            document.querySelectorAll('.correct-answer-radio').forEach(el => el.setAttribute('required', 'required'));
         } else {
             document.getElementById('options-container').classList.add('hidden');
             document.getElementById('answer-container').classList.remove('hidden');
             document.getElementById('q-answer-open').setAttribute('required', 'required');
+            document.querySelectorAll('.option-input').forEach(el => el.removeAttribute('required'));
+            document.querySelectorAll('.correct-answer-radio').forEach(el => el.removeAttribute('required'));
         }
     });
 
