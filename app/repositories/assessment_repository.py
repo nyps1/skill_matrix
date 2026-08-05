@@ -133,6 +133,5 @@ class AssessmentRepository:
     @staticmethod
     def get_auto_gradable_answers(session_id):
         return ExamAnswer.query.join(Question).filter(
-            ExamAnswer.session_id == session_id,
-            Question.type == 'multiple_choice'
+            ExamAnswer.session_id == session_id
         ).all()

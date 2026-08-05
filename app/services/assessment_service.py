@@ -140,10 +140,30 @@ class AssessmentService:
             
         auto_graded = AssessmentRepository.get_auto_gradable_answers(session.id)
         for ans in auto_graded:
-            if ans.provided_answer and ans.provided_answer.strip() == ans.question.answer.strip():
-                ans.score = ans.question.points
-            else:
-                ans.score = 0
+            provided = ans.provided_answer.strip() if ans.provided_answer else ''
+            correct = ans.question.answer.strip() if ans.question.answer else ''
+            
+            if ans.question.type == 'multiple_choice':
+                if provided == correct:
+                    ans.score = ans.question.points
+                else:
+                    ans.score = 0
+            elif ans.question.type == 'open_ended':
+                if not provided:
+                    ans.score = 0
+                elif provided == correct:
+                    ans.score = ans.question.points
+                else:
+                    import re
+                    # Split words by non-word characters and filter out empty strings
+                    provided_words = set(filter(None, re.split(r'\W+', provided.lower())))
+                    correct_words = set(filter(None, re.split(r'\W+', correct.lower())))
+                    
+                    if provided_words.intersection(correct_words):
+                        ans.score = ans.question.points / 2
+                    else:
+                        ans.score = 0
+                
                 
         session.status = 'submitted'
         session.submitted_at = datetime.utcnow()
