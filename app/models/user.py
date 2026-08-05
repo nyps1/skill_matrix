@@ -5,6 +5,11 @@ user_skill_permissions = db.Table('user_skill_permissions',
     db.Column('skill_id', db.Integer, db.ForeignKey('skill_categories.id'), primary_key=True)
 )
 
+user_assigned_assessments = db.Table('user_assigned_assessments',
+    db.Column('user_id', db.Integer, db.ForeignKey('users.id'), primary_key=True),
+    db.Column('skill_id', db.Integer, db.ForeignKey('skill_categories.id'), primary_key=True)
+)
+
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -15,6 +20,9 @@ class User(db.Model):
 
     authorized_skills = db.relationship('SkillCategory', secondary=user_skill_permissions, lazy='subquery',
         backref=db.backref('authorized_users', lazy=True))
+        
+    assigned_skills = db.relationship('SkillCategory', secondary=user_assigned_assessments, lazy='subquery',
+        backref=db.backref('assigned_users', lazy=True))
 
     def to_dict(self):
         return {
@@ -22,5 +30,6 @@ class User(db.Model):
             'username': self.username,
             'role': self.role,
             'is_active': self.is_active,
-            'authorized_skills': [s.id for s in self.authorized_skills]
+            'authorized_skills': [s.id for s in self.authorized_skills],
+            'assigned_skills': [s.id for s in self.assigned_skills]
         }

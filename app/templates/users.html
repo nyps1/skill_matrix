@@ -74,6 +74,25 @@
         </div>
     </div>
 </div>
+
+<!-- Assignments Modal -->
+<div class="modal fade" id="assignmentModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold">Assign Assessments - <span id="assign-username" class="text-success"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4" id="assign-modal-body">
+                <!-- Checkboxes injected here -->
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success px-4" id="btn-save-assignments">Save Assignments</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -114,6 +133,9 @@ function renderUsers() {
                 </div>
             </td>
             <td>
+                <button class="btn btn-sm btn-outline-success btn-assign me-2" data-id="${u.id}">
+                    Assign Assessments (${u.assigned_skills ? u.assigned_skills.length : 0})
+                </button>
                 <button class="btn btn-sm btn-outline-primary btn-permissions me-2" data-id="${u.id}">
                     Set Permissions (${u.authorized_skills.length})
                 </button>
@@ -184,6 +206,52 @@ function renderUsers() {
         });
     });
 
+    // Bind Assignments Modal
+    const assignModalEl = document.getElementById('assignmentModal');
+    const assignModal = new bootstrap.Modal(assignModalEl);
+
+    document.querySelectorAll('.btn-assign').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            currentPermUserId = parseInt(e.currentTarget.dataset.id);
+            const user = usersList.find(u => u.id === currentPermUserId);
+            if (!user) return;
+
+            document.getElementById('assign-username').textContent = user.username;
+            const body = document.getElementById('assign-modal-body');
+
+            if (skillsList.length === 0) {
+                body.innerHTML = '<div class="alert alert-warning mb-0">No skills exist yet. Please create a skill category first.</div>';
+            } else {
+                body.innerHTML = skillsList.map(s => {
+                    const isChecked = user.assigned_skills && user.assigned_skills.includes(s.id) ? 'checked' : '';
+                    return `
+                        <div class="form-check mb-3 p-3 border rounded shadow-sm ${isChecked ? 'bg-success-subtle border-success' : 'bg-light'}">
+                            <input class="form-check-input assign-chk fs-5 ms-1" type="checkbox" value="${s.id}" id="chk-assign-s-${s.id}" ${isChecked}>
+                            <label class="form-check-label fs-6 fw-semibold ms-3" for="chk-assign-s-${s.id}">
+                                ${escapeHtml(s.name)}
+                            </label>
+                        </div>
+                    `;
+                }).join('');
+
+                body.querySelectorAll('.assign-chk').forEach(cb => {
+                    cb.addEventListener('change', (ev) => {
+                        const parent = ev.target.closest('.form-check');
+                        if (ev.target.checked) {
+                            parent.classList.add('bg-success-subtle', 'border-success');
+                            parent.classList.remove('bg-light');
+                        } else {
+                            parent.classList.remove('bg-success-subtle', 'border-success');
+                            parent.classList.add('bg-light');
+                        }
+                    });
+                });
+            }
+
+            assignModal.show();
+        });
+    });
+
     // Bind Reset Password Buttons
     const resetModalEl = document.getElementById('resetPwdModal');
     const resetModal = new bootstrap.Modal(resetModalEl);
@@ -246,6 +314,21 @@ document.addEventListener('DOMContentLoaded', () => {
             loadData();
         } catch (err) {
             showToast('Failed to update permissions: ' + err.message);
+        }
+    });
+
+    document.getElementById('btn-save-assignments').addEventListener('click', async () => {
+        if (!currentPermUserId) return;
+        const checkedIds = Array.from(document.querySelectorAll('.assign-chk:checked')).map(cb => parseInt(cb.value));
+        try {
+            await Api.updateAssignments(currentPermUserId, checkedIds);
+            showToast('Assignments updated successfully');
+            const modalEl = document.getElementById('assignmentModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+            loadData();
+        } catch (err) {
+            showToast('Failed to update assignments: ' + err.message);
         }
     });
 });

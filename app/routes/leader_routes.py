@@ -42,6 +42,18 @@ def update_permissions(current_user, user_id):
     except ValueError as e:
         return jsonify({'message': str(e)}), 400
 
+@leader_bp.route('/users/<int:user_id>/assignments', methods=['PUT'])
+@token_required
+@leader_required
+def update_assignments(current_user, user_id):
+    data = request.get_json()
+    skill_ids = data.get('skill_ids', [])
+    try:
+        user = LeaderService.assign_assessments_to_engineer(user_id, skill_ids)
+        return jsonify(user.to_dict()), 200
+    except ValueError as e:
+        return jsonify({'message': str(e)}), 400
+
 @leader_bp.route('/users/<int:user_id>/toggle-active', methods=['PUT'])
 @token_required
 @leader_required

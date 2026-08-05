@@ -97,6 +97,14 @@ class LeaderService:
         return UserRepository.update_user_skills(user, skill_ids)
 
     @staticmethod
+    def assign_assessments_to_engineer(user_id, skill_ids):
+        user = UserRepository.get_by_id(user_id)
+        if not user or user.role != 'engineer':
+            raise ValueError('Can only assign assessments to engineers')
+        
+        return UserRepository.update_user_assignments(user, skill_ids)
+
+    @staticmethod
     def toggle_engineer_active(user_id):
         user = UserRepository.get_by_id(user_id)
         if not user or user.role != 'engineer':

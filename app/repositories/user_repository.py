@@ -37,6 +37,13 @@ class UserRepository:
         return user
 
     @staticmethod
+    def update_user_assignments(user, skill_ids):
+        skills = SkillCategory.query.filter(SkillCategory.id.in_(skill_ids)).all()
+        user.assigned_skills = skills
+        db.session.commit()
+        return user
+
+    @staticmethod
     def update_password(user, raw_password):
         hashed = bcrypt.hashpw(raw_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         user.password_hash = hashed

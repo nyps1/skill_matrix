@@ -80,6 +80,7 @@ class AssessmentService:
     def get_available_exams(current_user):
         skills = AssessmentRepository.get_all_skills()
         authorized_ids = [s.id for s in current_user.authorized_skills]
+        assigned_ids = [s.id for s in current_user.assigned_skills]
         
         from app.models.assessment import Question, ExamSession
         
@@ -88,13 +89,16 @@ class AssessmentService:
             q_count = Question.query.filter_by(skill_id=s.id).count()
             draft = ExamSession.query.filter_by(user_id=current_user.id, skill_id=s.id, status='draft').first()
             
-            status = 'available'
+            status = 'unassigned'
             if s.id in authorized_ids:
                 status = 'author'
             elif q_count == 0:
                 status = 'no_questions'
-            elif draft:
-                status = 'draft'
+            elif s.id in assigned_ids:
+                if draft:
+                    status = 'draft'
+                else:
+                    status = 'assigned'
                 
             available.append({
                 'skill_id': s.id,

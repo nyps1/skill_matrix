@@ -52,10 +52,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 btnClass = 'btn-outline-secondary';
                 btnText = 'No Questions';
                 disabled = 'disabled';
+            } else if (exam.status === 'unassigned') {
+                badge = '<span class="badge bg-light text-muted border mb-2">Unassigned</span>';
+                btnClass = 'btn-outline-secondary';
+                btnText = 'Not Yet Assigned';
+                disabled = 'disabled';
             } else if (exam.status === 'draft') {
                 badge = '<span class="badge bg-info text-dark mb-2">In Progress</span>';
                 btnClass = 'btn-warning';
                 btnText = 'Resume Draft';
+            } else if (exam.status === 'assigned') {
+                badge = '<span class="badge bg-success mb-2">Required Assessment</span>';
             }
 
             return `

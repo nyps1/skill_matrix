@@ -99,6 +99,13 @@ class Api {
         });
     }
 
+    static async updateAssignments(userId, skillIds) {
+        return this.request(`/admin/users/${userId}/assignments`, {
+            method: 'PUT',
+            body: { skill_ids: skillIds }
+        });
+    }
+
     static async toggleActive(userId) {
         return this.request(`/admin/users/${userId}/toggle-active`, {
             method: 'PUT'
