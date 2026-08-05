@@ -117,6 +117,13 @@ class Api {
         });
     }
 
+    static async updateSkillPassingScore(skillId, passingScore) {
+        return this.request(`/assessment/skills/${skillId}/passing_score`, {
+            method: 'PUT',
+            body: { passing_score: passingScore }
+        });
+    }
+
     static async getQuestions() {
         return this.request('/assessment/questions');
     }

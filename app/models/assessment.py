@@ -10,6 +10,7 @@ class Question(db.Model):
     content = db.Column(db.Text, nullable=False)
     options = db.Column(db.Text, nullable=True) # JSON string for multiple_choice
     answer = db.Column(db.Text, nullable=False)
+    points = db.Column(db.Integer, nullable=False, default=10)
 
     skill = db.relationship('SkillCategory', backref=db.backref('questions', lazy=True))
 
@@ -20,7 +21,8 @@ class Question(db.Model):
             'skill_name': self.skill.name if self.skill else None,
             'type': self.type,
             'content': self.content,
-            'options': json.loads(self.options) if self.options else None
+            'options': json.loads(self.options) if self.options else None,
+            'points': self.points
         }
         if include_answer:
             data['answer'] = self.answer

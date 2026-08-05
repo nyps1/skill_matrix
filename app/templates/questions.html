@@ -22,18 +22,22 @@
         <form id="question-form">
             <input type="hidden" id="editing-q-id" value="">
             <div class="row g-3">
-                <div class="col-md-6">
+                <div class="col-md-5">
                     <label class="form-label required fw-semibold">Skill / Exam Category</label>
                     <select class="form-select" id="q-skill" required>
                         <!-- Options injected dynamically -->
                     </select>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label class="form-label required fw-semibold">Question Type</label>
                     <select class="form-select" id="q-type" required>
                         <option value="multiple_choice">Multiple Choice</option>
                         <option value="open_ended">Open Ended / Short Answer</option>
                     </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label required fw-semibold">Points</label>
+                    <input type="number" class="form-control" id="q-points" value="10" min="0" required>
                 </div>
                 <div class="col-12">
                     <label class="form-label required fw-semibold">Question Content</label>
@@ -64,7 +68,14 @@
 <!-- Bottom Block: Exam Bank Status & Question Cards -->
 <div class="card shadow-sm border-0">
     <div class="card-header bg-light d-flex justify-content-between align-items-center py-3">
-        <h5 class="mb-0 fw-bold text-dark">Current Exam Bank Status</h5>
+        <div class="d-flex align-items-center gap-3">
+            <h5 class="mb-0 fw-bold text-dark">Current Exam Bank Status</h5>
+            <div class="input-group input-group-sm d-none" style="width: 220px;" id="passing-score-container">
+                <span class="input-group-text">Passing Score</span>
+                <input type="number" class="form-control" id="skill-passing-score" min="0">
+                <button class="btn btn-primary" type="button" id="btn-save-passing">Save</button>
+            </div>
+        </div>
         <span class="badge bg-secondary fs-6" id="questions-count-badge">0 Questions</span>
     </div>
     <div class="card-body p-4" id="questions-list-container">
@@ -158,7 +169,14 @@ function renderQuestionsForSelectedSkill() {
     if (!selectedSkillId) {
         container.innerHTML = `<p class="text-muted text-center py-4">Select a skill to view question bank status.</p>`;
         badge.textContent = '0 Questions';
+        document.getElementById('passing-score-container').classList.add('d-none');
         return;
+    }
+
+    const selectedSkill = skillsList.find(s => s.id === selectedSkillId);
+    if (selectedSkill) {
+        document.getElementById('skill-passing-score').value = selectedSkill.passing_score !== undefined ? selectedSkill.passing_score : 60;
+        document.getElementById('passing-score-container').classList.remove('d-none');
     }
 
     const filtered = allQuestions.filter(q => q.skill_id === selectedSkillId);
@@ -177,6 +195,7 @@ function renderQuestionsForSelectedSkill() {
                     <span class="badge ${q.type === 'multiple_choice' ? 'bg-info text-dark' : 'bg-secondary'} me-2">
                         ${q.type === 'multiple_choice' ? 'Multiple Choice' : 'Open Ended'}
                     </span>
+                    <span class="badge bg-success me-2">${q.points || 10} Points</span>
                     <span class="text-muted small">${escapeHtml(q.skill_name || '')}</span>
                 </div>
                 <button class="btn btn-sm btn-outline-primary btn-edit-q fw-semibold" data-id="${q.id}">
@@ -218,6 +237,7 @@ function renderQuestionsForSelectedSkill() {
             document.getElementById('editing-q-id').value = q.id;
             document.getElementById('q-skill').value = q.skill_id;
             document.getElementById('q-type').value = q.type;
+            document.getElementById('q-points').value = q.points !== undefined ? q.points : 10;
             document.getElementById('q-content').value = q.content;
             if (q.type === 'multiple_choice') {
                 renderOptions(q.options, q.answer);
@@ -241,6 +261,7 @@ function cancelEditing() {
     editingQuestionId = null;
     document.getElementById('editing-q-id').value = '';
     document.getElementById('q-content').value = '';
+    document.getElementById('q-points').value = '10';
     renderOptions(); // reset options
     document.getElementById('q-answer-open').value = '';
     document.getElementById('q-type').value = 'multiple_choice';
@@ -256,6 +277,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('btn-cancel-edit').addEventListener('click', () => {
         cancelEditing();
+    });
+
+    document.getElementById('btn-save-passing').addEventListener('click', async () => {
+        const skillId = parseInt(document.getElementById('q-skill').value);
+        const passingScore = parseInt(document.getElementById('skill-passing-score').value);
+        if (!skillId) return;
+        
+        try {
+            const updated = await Api.updateSkillPassingScore(skillId, passingScore);
+            const idx = skillsList.findIndex(s => s.id === skillId);
+            if (idx !== -1) skillsList[idx] = updated;
+            showToast('Passing score updated successfully!');
+        } catch (err) {
+            showToast('Failed to update passing score: ' + err.message);
+        }
     });
 
     document.getElementById('btn-add-option').addEventListener('click', () => {
@@ -282,6 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const skill_id = parseInt(document.getElementById('q-skill').value);
         const type = document.getElementById('q-type').value;
+        const points = parseInt(document.getElementById('q-points').value);
         const content = document.getElementById('q-content').value;
         let options = null;
         let answer = '';
@@ -312,7 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
             answer = document.getElementById('q-answer-open').value.trim();
         }
 
-        const payload = { skill_id, type, content, options, answer };
+        const payload = { skill_id, type, points, content, options, answer };
 
         try {
             if (editingQuestionId) {
@@ -323,8 +360,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 await Api.createQuestion(payload);
                 showToast('Question created successfully');
                 document.getElementById('q-content').value = '';
-                document.getElementById('q-options').value = '';
-                document.getElementById('q-answer').value = '';
+                document.getElementById('q-points').value = '10';
+                renderOptions();
+                document.getElementById('q-answer-open').value = '';
             }
 
             allQuestions = await Api.getQuestions();

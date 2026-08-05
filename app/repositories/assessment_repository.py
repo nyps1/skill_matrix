@@ -18,13 +18,14 @@ class AssessmentRepository:
 
     # Questions
     @staticmethod
-    def create_question(skill_id, q_type, content, options, answer):
+    def create_question(skill_id, q_type, content, options, answer, points=10):
         q = Question(
             skill_id=skill_id,
             type=q_type,
             content=content,
             options=options,
-            answer=answer
+            answer=answer,
+            points=points
         )
         db.session.add(q)
         db.session.commit()
@@ -39,14 +40,23 @@ class AssessmentRepository:
         return Question.query.get(question_id)
 
     @staticmethod
-    def update_question(q, skill_id, q_type, content, options, answer):
+    def update_question(q, skill_id, q_type, content, options, answer, points=10):
         q.skill_id = skill_id
         q.type = q_type
         q.content = content
         q.options = options
         q.answer = answer
+        q.points = points
         db.session.commit()
         return q
+
+    @staticmethod
+    def update_skill_passing_score(skill_id, passing_score):
+        skill = SkillCategory.query.get(skill_id)
+        if skill:
+            skill.passing_score = passing_score
+            db.session.commit()
+        return skill
 
     # Exam Sessions
     @staticmethod

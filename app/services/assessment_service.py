@@ -33,7 +33,8 @@ class AssessmentService:
             data['type'],
             data['content'],
             options,
-            data['answer']
+            data['answer'],
+            int(data.get('points', 10))
         )
 
     @staticmethod
@@ -62,7 +63,8 @@ class AssessmentService:
             data['type'],
             data['content'],
             options,
-            data['answer']
+            data['answer'],
+            int(data.get('points', 10))
         )
 
     @staticmethod
@@ -135,7 +137,7 @@ class AssessmentService:
         auto_graded = AssessmentRepository.get_auto_gradable_answers(session.id)
         for ans in auto_graded:
             if ans.provided_answer and ans.provided_answer.strip() == ans.question.answer.strip():
-                ans.score = 10
+                ans.score = ans.question.points
             else:
                 ans.score = 0
                 

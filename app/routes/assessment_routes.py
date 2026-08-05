@@ -19,6 +19,25 @@ def manage_skills(current_user):
     skills = AssessmentRepository.get_all_skills()
     return jsonify([s.to_dict() for s in skills]), 200
 
+@assessment_bp.route('/skills/<int:skill_id>/passing_score', methods=['PUT'])
+@token_required
+def update_skill_passing_score(current_user, skill_id):
+    if current_user.role != 'leader':
+        return jsonify({'message': 'Only leader can update passing score'}), 403
+    
+    data = request.get_json()
+    if 'passing_score' not in data:
+        return jsonify({'message': 'passing_score is required'}), 400
+        
+    try:
+        passing_score = int(data['passing_score'])
+        skill = AssessmentRepository.update_skill_passing_score(skill_id, passing_score)
+        if not skill:
+            return jsonify({'message': 'Skill not found'}), 404
+        return jsonify(skill.to_dict()), 200
+    except ValueError:
+        return jsonify({'message': 'Invalid passing score'}), 400
+
 @assessment_bp.route('/questions', methods=['GET', 'POST'])
 @token_required
 def manage_questions(current_user):
@@ -107,12 +126,7 @@ def my_dashboard(current_user):
     total_score_sum = 0
     total_score_count = 0
     latest_submitted_at = None
-
     for session in sessions:
-        if session.total_score is not None:
-            total_score_sum += session.total_score
-            total_score_count += 1
-            
         # Keep track of the absolute latest submission time
         if session.submitted_at:
             if latest_submitted_at is None or session.submitted_at > latest_submitted_at:
@@ -121,17 +135,27 @@ def my_dashboard(current_user):
         # Calculate score for this skill session
         skill_name = session.skill.name if session.skill else 'Unknown'
         skill_score_sum = 0
-        skill_ans_count = 0
+        skill_possible_sum = 0
         for ans in session.answers:
             if ans.score is not None:
                 skill_score_sum += ans.score
-                skill_ans_count += 1
+            if ans.question and ans.question.points is not None:
+                skill_possible_sum += ans.question.points
                 
-        if skill_ans_count > 0:
+        session_percentage = round((skill_score_sum / skill_possible_sum) * 100, 1) if skill_possible_sum > 0 else 0
+        passing_score = session.skill.passing_score if session.skill else 60
+        passed = skill_score_sum >= passing_score
+        
+        if skill_possible_sum > 0:
             skills_data.append({
                 'skill': skill_name,
-                'score': round(skill_score_sum / skill_ans_count, 1)
+                'score': skill_score_sum,
+                'percentage': session_percentage,
+                'passing_score': passing_score,
+                'passed': passed
             })
+            total_score_sum += session_percentage
+            total_score_count += 1
 
     overall_score = round(total_score_sum / total_score_count, 1) if total_score_count > 0 else None
     

@@ -17,13 +17,16 @@ class LeaderService:
                 skill_name = session.skill.name if session.skill else 'Unknown'
                 
                 skill_score_sum = 0
-                skill_ans_count = 0
+                skill_possible_sum = 0
                 for ans in session.answers:
                     if ans.score is not None:
                         skill_score_sum += ans.score
-                        skill_ans_count += 1
+                    if ans.question and ans.question.points is not None:
+                        skill_possible_sum += ans.question.points
                         
-                session_avg_score = round(skill_score_sum / skill_ans_count, 1) if skill_ans_count > 0 else 0
+                session_percentage = round((skill_score_sum / skill_possible_sum) * 100, 1) if skill_possible_sum > 0 else 0
+                passing_score = session.skill.passing_score if session.skill else 60
+                passed = skill_score_sum >= passing_score
                 
                 if skill_name not in trends_by_skill:
                     trends_by_skill[skill_name] = []
@@ -31,12 +34,17 @@ class LeaderService:
                 date_str = session.submitted_at.strftime('%Y-%m-%d %H:%M') if session.submitted_at else 'Unknown'
                 trends_by_skill[skill_name].append({
                     'date': date_str,
-                    'score': session_avg_score
+                    'score': skill_score_sum,
+                    'percentage': session_percentage,
+                    'passed': passed
                 })
                 
                 latest_per_skill_map[skill_name] = {
                     'session': session,
-                    'avg_score': session_avg_score
+                    'score': skill_score_sum,
+                    'percentage': session_percentage,
+                    'passing_score': passing_score,
+                    'passed': passed
                 }
                 
             skills_data = []
@@ -44,12 +52,19 @@ class LeaderService:
             total_score_count = 0
             
             for skill_name, data in latest_per_skill_map.items():
-                skills_data.append({'skill': skill_name, 'score': data['avg_score']})
-                if data['session'].total_score is not None:
-                    total_score_sum += data['session'].total_score
-                    total_score_count += 1
+                skills_data.append({
+                    'skill': skill_name, 
+                    'score': data['score'], 
+                    'percentage': data['percentage'],
+                    'passing_score': data['passing_score'],
+                    'passed': data['passed']
+                })
+                # if total_score is needed, we could sum them, but radar needs percentage
             
-            overall_score = round(total_score_sum / total_score_count, 1) if total_score_count > 0 else None
+            # overall score can be average percentage
+            total_percentage_sum = sum(d['percentage'] for d in latest_per_skill_map.values())
+            total_percentage_count = len(latest_per_skill_map)
+            overall_score = round(total_percentage_sum / total_percentage_count, 1) if total_percentage_count > 0 else None
             
             results.append({
                 'user': eng.to_dict(),

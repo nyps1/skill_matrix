@@ -35,6 +35,21 @@
         <div class="spinner-border text-primary" role="status"></div>
     </div>
 </div>
+
+<!-- Engineer Detail Modal -->
+<div class="modal fade" id="engineerDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold text-dark" id="modalEngineerName">Skill Breakdown</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4" id="modalEngineerBody">
+                <!-- Content injected via JS -->
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -42,17 +57,7 @@
 let dashboardData = [];
 let chartInstances = {};
 
-function getScoreColor(score) {
-    if (score >= 8) return '#198754';
-    if (score >= 5) return '#fd7e14';
-    return '#dc3545';
-}
-
-function getScoreLabel(score) {
-    if (score >= 8) return 'Excellent';
-    if (score >= 5) return 'Adequate';
-    return 'Needs Improvement';
-}
+// Deleted unused score color/label functions
 
 function renderCharts() {
     const container = document.getElementById('dashboard-charts-container');
@@ -93,9 +98,9 @@ function renderCharts() {
                         ${!d.user.is_active ? '<span class="badge bg-danger ms-2">Inactive</span>' : ''}
                     </h5>
                     <h6 class="card-subtitle mb-3 text-muted">
-                        Latest Total Score: 
-                        <span class="badge ${d.latest_score !== null ? 'bg-success' : 'bg-secondary'}">
-                            ${d.latest_score !== null ? d.latest_score : 'No Data'}
+                        Latest Overall: 
+                        <span class="badge ${d.latest_score !== null ? (d.latest_score >= 60 ? 'bg-success' : 'bg-warning text-dark') : 'bg-secondary'}">
+                            ${d.latest_score !== null ? d.latest_score + '%' : 'No Data'}
                         </span>
                     </h6>
                     ${d.skills_radar && d.skills_radar.length > 0 
@@ -104,48 +109,6 @@ function renderCharts() {
                                <small class="text-muted">Click to expand skill details</small>
                            </div>` 
                         : '<p class="text-muted small text-center mt-4">No skill data available</p>'}
-                </div>
-            </div>
-            <!-- Accordion Detail Panel -->
-            <div id="detail-${d.user.id}" class="collapse mt-0">
-                <div class="card border-0 shadow-sm" style="border-radius: 0 0 14px 14px; margin-top: -1.5rem;">
-                    <div class="card-body pt-4">
-                        <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">Skill Breakdown for ${escapeHtml(d.user.username)}</h6>
-                        <div class="row">
-                            <div class="col-md-5">
-                                <h6 class="fw-bold text-secondary mb-3">Latest Scores</h6>
-                                ${d.skills_radar && d.skills_radar.length > 0 ? d.skills_radar.map(s => `
-                                    <div class="card mb-2 border shadow-sm">
-                                        <div class="card-body py-3 px-4">
-                                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                                <span class="fw-semibold text-dark">${escapeHtml(s.skill)}</span>
-                                                <span class="badge fs-6" style="background-color: ${getScoreColor(s.score)};">
-                                                    ${s.score.toFixed(1)} / 10
-                                                </span>
-                                            </div>
-                                            <div class="progress" style="height: 10px; border-radius: 6px;">
-                                                <div class="progress-bar" role="progressbar" 
-                                                     style="width: ${s.score * 10}%; background-color: ${getScoreColor(s.score)}; border-radius: 6px;"
-                                                     aria-valuenow="${s.score}" aria-valuemin="0" aria-valuemax="10">
-                                                </div>
-                                            </div>
-                                            <div class="text-end mt-1">
-                                                <small class="text-muted">${getScoreLabel(s.score)}</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                `).join('') : '<p class="text-muted text-center mb-0">No assessment records for this engineer.</p>'}
-                            </div>
-                            <div class="col-md-7">
-                                <h6 class="fw-bold text-secondary mb-3">Historical Trends</h6>
-                                ${d.historical_trends && Object.keys(d.historical_trends).length > 0 ? `
-                                    <div style="height: 350px;">
-                                        <canvas id="trend-${d.user.id}"></canvas>
-                                    </div>
-                                ` : '<p class="text-muted text-center mt-5">No historical data available.</p>'}
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -160,75 +123,120 @@ function renderCharts() {
                 data: {
                     labels: d.skills_radar.map(s => s.skill),
                     datasets: [{
-                        label: 'Skill Level',
-                        data: d.skills_radar.map(s => s.score),
+                        label: 'Skill Level (%)',
+                        data: d.skills_radar.map(s => s.percentage),
                         backgroundColor: 'rgba(13, 110, 253, 0.2)',
                         borderColor: 'rgba(13, 110, 253, 1)',
                         pointBackgroundColor: 'rgba(13, 110, 253, 1)'
                     }]
                 },
                 options: {
-                    scales: { r: { min: 0, max: 10, ticks: { display: false } } },
+                    scales: { r: { min: 0, max: 100, ticks: { display: false } } },
                     plugins: { legend: { display: false } },
                     maintainAspectRatio: false
                 }
             });
-            
-            // Historical Trends Chart
-            if (d.historical_trends && Object.keys(d.historical_trends).length > 0) {
-                const trendCtx = document.getElementById(`trend-${d.user.id}`).getContext('2d');
-                
-                const datasets = [];
-                const colors = ['#0d6efd', '#198754', '#fd7e14', '#dc3545', '#6f42c1', '#20c997', '#0dcaf0'];
-                let colorIdx = 0;
-                
-                const allDatesSet = new Set();
-                Object.values(d.historical_trends).forEach(arr => {
-                    arr.forEach(pt => allDatesSet.add(pt.date));
-                });
-                const labels = Array.from(allDatesSet).sort();
-                
-                for (const [skill, history] of Object.entries(d.historical_trends)) {
-                    const dataPoints = labels.map(dateLabel => {
-                        const pt = history.find(h => h.date === dateLabel);
-                        return pt ? pt.score : null;
-                    });
-                    
-                    datasets.push({
-                        label: skill,
-                        data: dataPoints,
-                        borderColor: colors[colorIdx % colors.length],
-                        backgroundColor: colors[colorIdx % colors.length],
-                        tension: 0.3,
-                        spanGaps: true
-                    });
-                    colorIdx++;
-                }
-
-                chartInstances[`trend-${d.user.id}`] = new Chart(trendCtx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: datasets
-                    },
-                    options: {
-                        scales: { y: { min: 0, max: 10 } },
-                        plugins: { 
-                            legend: { position: 'bottom' }
-                        },
-                        maintainAspectRatio: false
-                    }
-                });
-            }
         }
     });
 }
 
 function toggleSkillDetail(userId) {
-    const el = document.getElementById(`detail-${userId}`);
-    if (!el) return;
-    const bsCollapse = bootstrap.Collapse.getOrCreateInstance(el);
-    bsCollapse.toggle();
+    const d = dashboardData.find(item => item.user.id === userId);
+    if (!d) return;
+
+    document.getElementById('modalEngineerName').textContent = `Skill Breakdown: ${d.user.username}`;
+    
+    const body = document.getElementById('modalEngineerBody');
+    body.innerHTML = `
+        <div class="row">
+            <div class="col-md-5">
+                <h6 class="fw-bold text-secondary mb-3">Latest Scores</h6>
+                ${d.skills_radar && d.skills_radar.length > 0 ? d.skills_radar.map(s => `
+                    <div class="card mb-2 border shadow-sm">
+                        <div class="card-body py-3 px-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-semibold text-dark">${escapeHtml(s.skill)}</span>
+                                <span class="badge fs-6 ${s.passed ? 'bg-success' : 'bg-danger'}">
+                                    ${s.score} Pts (${s.percentage}%)
+                                </span>
+                            </div>
+                            <div class="progress" style="height: 10px; border-radius: 6px;">
+                                <div class="progress-bar ${s.passed ? 'bg-success' : 'bg-danger'}" role="progressbar" 
+                                     style="width: ${s.percentage}%; border-radius: 6px;"
+                                     aria-valuenow="${s.percentage}" aria-valuemin="0" aria-valuemax="100">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('') : '<p class="text-muted text-center mb-0">No assessment records for this engineer.</p>'}
+            </div>
+            <div class="col-md-7">
+                <h6 class="fw-bold text-secondary mb-3">Historical Trends</h6>
+                ${d.historical_trends && Object.keys(d.historical_trends).length > 0 ? `
+                    <div style="height: 400px;">
+                        <canvas id="modal-trend-${d.user.id}"></canvas>
+                    </div>
+                ` : '<p class="text-muted text-center mt-5">No historical data available.</p>'}
+            </div>
+        </div>
+    `;
+
+    // Show modal
+    const modalEl = document.getElementById('engineerDetailModal');
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+
+    // Render trend chart inside modal after a short delay
+    setTimeout(() => {
+        if (d.historical_trends && Object.keys(d.historical_trends).length > 0) {
+            if (chartInstances['modal-trend']) {
+                chartInstances['modal-trend'].destroy();
+            }
+            
+            const trendCtx = document.getElementById(`modal-trend-${d.user.id}`).getContext('2d');
+            const datasets = [];
+            const colors = ['#0d6efd', '#198754', '#fd7e14', '#dc3545', '#6f42c1', '#20c997', '#0dcaf0'];
+            let colorIdx = 0;
+            
+            const allDatesSet = new Set();
+            Object.values(d.historical_trends).forEach(arr => {
+                arr.forEach(pt => allDatesSet.add(pt.date));
+            });
+            const labels = Array.from(allDatesSet).sort();
+            
+            for (const [skill, history] of Object.entries(d.historical_trends)) {
+                const dataPoints = labels.map(dateLabel => {
+                    const pt = history.find(h => h.date === dateLabel);
+                    return pt ? pt.percentage : null;
+                });
+                
+                datasets.push({
+                    label: skill,
+                    data: dataPoints,
+                    borderColor: colors[colorIdx % colors.length],
+                    backgroundColor: colors[colorIdx % colors.length],
+                    tension: 0.3,
+                    spanGaps: true
+                });
+                colorIdx++;
+            }
+
+            chartInstances['modal-trend'] = new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    scales: { y: { min: 0, max: 100 } },
+                    plugins: { 
+                        legend: { position: 'bottom' }
+                    },
+                    maintainAspectRatio: false
+                }
+            });
+        }
+    }, 200);
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
