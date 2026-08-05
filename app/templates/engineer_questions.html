@@ -21,67 +21,124 @@
 
 <!-- Authorized Section -->
 <div id="authorized-section" class="hidden">
-    <!-- Question Form -->
-    <div class="card shadow-sm border-0 mb-4" id="eng-form-card">
-        <div class="card-header bg-primary text-white fw-bold d-flex justify-content-between align-items-center">
-            <span id="eng-form-title">Create New Question</span>
-            <button id="btn-eng-cancel-edit" class="btn btn-sm btn-light text-dark hidden">Cancel Edit</button>
-        </div>
-        <div class="card-body p-4">
-            <form id="eng-question-form">
-                <input type="hidden" id="eng-editing-q-id" value="">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label required fw-semibold">Authorized Skill Category</label>
-                        <select class="form-select" id="eng-q-skill" required></select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label required fw-semibold">Question Type</label>
-                        <select class="form-select" id="eng-q-type" required>
-                            <option value="multiple_choice">Multiple Choice</option>
-                            <option value="open_ended">Open Ended / Short Answer</option>
-                        </select>
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label required fw-semibold">Question Content</label>
-                        <textarea class="form-control" id="eng-q-content" rows="3" placeholder="Enter full question content" required></textarea>
-                    </div>
-                    <div class="col-md-6" id="eng-options-container">
-                        <label class="form-label fw-semibold">Options (JSON Array format)</label>
-                        <input type="text" class="form-control" id="eng-q-options" placeholder='["Option A", "Option B", "Option C"]'>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label required fw-semibold">Standard Answer</label>
-                        <input type="text" class="form-control" id="eng-q-answer" placeholder="Enter standard answer" required>
-                    </div>
-                    <div class="col-12 mt-3">
-                        <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btn-eng-submit-q">Submit Question</button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
 
-    <!-- Question Bank Status -->
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center py-3">
+<!-- Top Block: Question Creation & Editing Form -->
+<div class="card shadow-sm border-0 mb-4" id="form-card">
+    <div class="card-header bg-primary text-white fw-bold d-flex justify-content-between align-items-center" id="form-header">
+        <span id="form-title">Create New Question</span>
+        <button id="btn-cancel-edit" class="btn btn-sm btn-light text-dark hidden">Cancel Edit</button>
+    </div>
+    <div class="card-body p-4">
+        <form id="question-form">
+            <input type="hidden" id="editing-q-id" value="">
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <label class="form-label required fw-semibold">Skill / Exam Category</label>
+                    <select class="form-select" id="q-skill" required>
+                        <!-- Options injected dynamically -->
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label required fw-semibold">Question Type</label>
+                    <select class="form-select" id="q-type" required>
+                        <option value="multiple_choice">Multiple Choice</option>
+                        <option value="open_ended">Open Ended / Short Answer</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label required fw-semibold">Points</label>
+                    <input type="number" class="form-control" id="q-points" value="10" min="0" required>
+                </div>
+                <div class="col-12">
+                    <label class="form-label required fw-semibold">Question Content</label>
+                    <textarea class="form-control" id="q-content" rows="3" placeholder="Enter full question content" required></textarea>
+                </div>
+                <div class="col-12" id="options-container">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label fw-semibold mb-0">Multiple Choice Options & Standard Answer</label>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-add-option">＋ Add Option</button>
+                    </div>
+                    <div id="dynamic-options-list" class="d-flex flex-column gap-2">
+                        <!-- Options injected here -->
+                    </div>
+                    <small class="text-muted mt-1 d-block">Select the radio button next to the option to mark it as the correct answer.</small>
+                </div>
+                <div class="col-12 hidden" id="answer-container">
+                    <label class="form-label required fw-semibold">Standard Answer</label>
+                    <textarea class="form-control" id="q-answer-open" rows="2" placeholder="Enter standard answer (for open-ended)"></textarea>
+                </div>
+                <div class="col-12 mt-3">
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold" id="btn-submit-q">Submit Question</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Bottom Block: Exam Bank Status & Question Cards -->
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center py-3">
+        <div class="d-flex align-items-center gap-3">
             <h5 class="mb-0 fw-bold text-dark">Current Exam Bank Status</h5>
-            <span class="badge bg-secondary fs-6" id="eng-questions-count-badge">0 Questions</span>
-        </div>
-        <div class="card-body p-4" id="eng-questions-list-container">
-            <div class="text-center py-4">
-                <div class="spinner-border text-primary" role="status"></div>
+            <div class="input-group input-group-sm d-none" style="width: 220px;" id="passing-score-container">
+                <span class="input-group-text">Passing Score</span>
+                <input type="number" class="form-control" id="skill-passing-score" min="0">
+                <button class="btn btn-primary" type="button" id="btn-save-passing">Save</button>
             </div>
         </div>
+        <span class="badge bg-secondary fs-6" id="questions-count-badge">0 Questions</span>
     </div>
+    <div class="card-body p-4" id="questions-list-container">
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status"></div>
+        </div>
+    </div>
+</div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-let authorizedSkills = [];
+let skillsList = [];
 let allQuestions = [];
 let editingQuestionId = null;
+
+let optionCount = 0;
+
+function createOptionRow(val = '', isCorrect = false) {
+    optionCount++;
+    const id = `opt-${optionCount}`;
+    const row = document.createElement('div');
+    row.className = 'input-group option-row';
+    row.innerHTML = `
+        <div class="input-group-text bg-white">
+            <input class="form-check-input mt-0 correct-answer-radio" type="radio" name="correct_option" value="${id}" ${isCorrect ? 'checked' : ''} required>
+        </div>
+        <input type="text" class="form-control option-input" placeholder="Option text" value="${escapeHtml(val)}" required>
+        <button class="btn btn-outline-danger btn-remove-option" type="button"><i class="bi bi-trash"></i></button>
+    `;
+    
+    row.querySelector('.btn-remove-option').addEventListener('click', () => {
+        row.remove();
+    });
+    
+    return row;
+}
+
+function renderOptions(optionsArr = [], answerStr = '') {
+    const list = document.getElementById('dynamic-options-list');
+    list.innerHTML = '';
+    optionCount = 0;
+    
+    if (!optionsArr || optionsArr.length === 0) {
+        list.appendChild(createOptionRow('', true));
+        list.appendChild(createOptionRow(''));
+    } else {
+        optionsArr.forEach(opt => {
+            list.appendChild(createOptionRow(opt, opt === answerStr));
+        });
+    }
+}
 
 async function initPage() {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -99,59 +156,72 @@ async function initPage() {
             Api.getSkills(),
             Api.getQuestions()
         ]);
-
-        authorizedSkills = skills.filter(s => authSkillsIds.includes(s.id));
+        
+        // Filter skills based on authorization
+        skillsList = skills.filter(s => authSkillsIds.includes(s.id));
         allQuestions = questions;
 
-        const skillSelect = document.getElementById('eng-q-skill');
-        skillSelect.innerHTML = authorizedSkills.map(s =>
-            `<option value="${s.id}">${escapeHtml(s.name)}</option>`
-        ).join('');
+        const skillSelect = document.getElementById('q-skill');
+        if (skillsList.length === 0) {
+            skillSelect.innerHTML = `<option value="">No skills available. Create a skill first.</option>`;
+        } else {
+            skillSelect.innerHTML = skillsList.map(s => `
+                <option value="${s.id}">${escapeHtml(s.name)}</option>
+            `).join('');
+        }
 
-        renderEngQuestions();
+        renderQuestionsForSelectedSkill();
 
-        skillSelect.addEventListener('change', () => renderEngQuestions());
-
-        document.getElementById('eng-q-type').addEventListener('change', (e) => {
-            const optsCol = document.getElementById('eng-options-container');
-            optsCol.classList.toggle('d-none', e.target.value !== 'multiple_choice');
+        skillSelect.addEventListener('change', () => {
+            renderQuestionsForSelectedSkill();
         });
 
+
+
     } catch (err) {
-        document.getElementById('eng-questions-list-container').innerHTML = 
+        document.getElementById('questions-list-container').innerHTML = 
             `<div class="alert alert-danger mb-0">Failed to load data: ${err.message}</div>`;
     }
 }
 
-function renderEngQuestions() {
-    const container = document.getElementById('eng-questions-list-container');
-    const badge = document.getElementById('eng-questions-count-badge');
-    const selectedSkillId = parseInt(document.getElementById('eng-q-skill').value);
+function renderQuestionsForSelectedSkill() {
+    const container = document.getElementById('questions-list-container');
+    const badge = document.getElementById('questions-count-badge');
+    const selectedSkillId = parseInt(document.getElementById('q-skill').value);
 
     if (!selectedSkillId) {
-        container.innerHTML = `<p class="text-muted text-center py-4">No authorized skill selected.</p>`;
+        container.innerHTML = `<p class="text-muted text-center py-4">Select a skill to view question bank status.</p>`;
         badge.textContent = '0 Questions';
+        document.getElementById('passing-score-container').classList.add('d-none');
         return;
+    }
+
+    const selectedSkill = skillsList.find(s => s.id === selectedSkillId);
+    if (selectedSkill) {
+        document.getElementById('skill-passing-score').value = selectedSkill.passing_score !== undefined ? selectedSkill.passing_score : 60;
+        document.getElementById('passing-score-container').classList.remove('d-none');
     }
 
     const filtered = allQuestions.filter(q => q.skill_id === selectedSkillId);
     badge.textContent = `${filtered.length} Question${filtered.length === 1 ? '' : 's'}`;
 
     if (filtered.length === 0) {
-        container.innerHTML = `<div class="alert alert-info mb-0 text-center">No questions created yet for this authorized skill.</div>`;
+        container.innerHTML = `<div class="alert alert-info mb-0 text-center">No questions added yet for this skill category. Use the form above to add the first question.</div>`;
         return;
     }
 
     container.innerHTML = filtered.map((q, idx) => `
-        <div class="card mb-3 border shadow-sm">
+        <div class="card mb-3 border shadow-sm" id="q-card-${q.id}">
             <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
                 <div>
                     <span class="fw-bold text-primary fs-5 me-2">Q${idx + 1}.</span>
                     <span class="badge ${q.type === 'multiple_choice' ? 'bg-info text-dark' : 'bg-secondary'} me-2">
                         ${q.type === 'multiple_choice' ? 'Multiple Choice' : 'Open Ended'}
                     </span>
+                    <span class="badge bg-success me-2">${q.points || 10} Points</span>
+                    <span class="text-muted small">${escapeHtml(q.skill_name || '')}</span>
                 </div>
-                <button class="btn btn-sm btn-outline-primary btn-eng-edit-q fw-semibold" data-id="${q.id}">
+                <button class="btn btn-sm btn-outline-primary btn-edit-q fw-semibold" data-id="${q.id}">
                     Edit Question
                 </button>
             </div>
@@ -179,82 +249,147 @@ function renderEngQuestions() {
         </div>
     `).join('');
 
-    document.querySelectorAll('.btn-eng-edit-q').forEach(btn => {
+    // Bind Edit Buttons
+    document.querySelectorAll('.btn-edit-q').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const qid = parseInt(e.currentTarget.dataset.id);
             const q = allQuestions.find(item => item.id === qid);
             if (!q) return;
 
             editingQuestionId = q.id;
-            document.getElementById('eng-editing-q-id').value = q.id;
-            document.getElementById('eng-q-skill').value = q.skill_id;
-            document.getElementById('eng-q-type').value = q.type;
-            document.getElementById('eng-q-content').value = q.content;
-            document.getElementById('eng-q-options').value = q.options ? JSON.stringify(q.options) : '';
-            document.getElementById('eng-q-answer').value = q.answer;
+            document.getElementById('editing-q-id').value = q.id;
+            document.getElementById('q-skill').value = q.skill_id;
+            document.getElementById('q-type').value = q.type;
+            document.getElementById('q-points').value = q.points !== undefined ? q.points : 10;
+            document.getElementById('q-content').value = q.content;
+            if (q.type === 'multiple_choice') {
+                renderOptions(q.options, q.answer);
+                document.getElementById('q-type').dispatchEvent(new Event('change'));
+            } else {
+                document.getElementById('q-answer-open').value = q.answer;
+                document.getElementById('q-type').dispatchEvent(new Event('change'));
+            }
 
-            document.getElementById('eng-form-title').textContent = `Edit Question #${qid}`;
-            document.getElementById('btn-eng-submit-q').textContent = 'Update Question';
-            document.getElementById('btn-eng-submit-q').className = 'btn btn-warning px-4 fw-semibold';
-            document.getElementById('btn-eng-cancel-edit').classList.remove('hidden');
+            document.getElementById('form-title').textContent = `Edit Question Q${qid}`;
+            document.getElementById('btn-submit-q').textContent = 'Update Question';
+            document.getElementById('btn-submit-q').className = 'btn btn-warning px-4 fw-semibold';
+            document.getElementById('btn-cancel-edit').classList.remove('hidden');
 
-            document.getElementById('eng-form-card').scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('form-card').scrollIntoView({ behavior: 'smooth' });
         });
     });
 }
 
-function cancelEngEditing() {
+function cancelEditing() {
     editingQuestionId = null;
-    document.getElementById('eng-editing-q-id').value = '';
-    document.getElementById('eng-q-content').value = '';
-    document.getElementById('eng-q-options').value = '';
-    document.getElementById('eng-q-answer').value = '';
-    document.getElementById('eng-form-title').textContent = 'Create New Question';
-    document.getElementById('btn-eng-submit-q').textContent = 'Submit Question';
-    document.getElementById('btn-eng-submit-q').className = 'btn btn-primary px-4 fw-semibold';
-    document.getElementById('btn-eng-cancel-edit').classList.add('hidden');
+    document.getElementById('editing-q-id').value = '';
+    document.getElementById('q-content').value = '';
+    document.getElementById('q-points').value = '10';
+    renderOptions(); // reset options
+    document.getElementById('q-answer-open').value = '';
+    document.getElementById('q-type').value = 'multiple_choice';
+    document.getElementById('q-type').dispatchEvent(new Event('change'));
+    document.getElementById('form-title').textContent = 'Create New Question';
+    document.getElementById('btn-submit-q').textContent = 'Submit Question';
+    document.getElementById('btn-submit-q').className = 'btn btn-primary px-4 fw-semibold';
+    document.getElementById('btn-cancel-edit').classList.add('hidden');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     initPage();
 
-    document.getElementById('btn-eng-cancel-edit').addEventListener('click', () => cancelEngEditing());
+    document.getElementById('btn-cancel-edit').addEventListener('click', () => {
+        cancelEditing();
+    });
 
-    document.getElementById('eng-question-form').addEventListener('submit', async (e) => {
+    document.getElementById('btn-save-passing').addEventListener('click', async () => {
+        const skillId = parseInt(document.getElementById('q-skill').value);
+        const passingScore = parseInt(document.getElementById('skill-passing-score').value);
+        if (!skillId) return;
+        
+        try {
+            const updated = await Api.updateSkillPassingScore(skillId, passingScore);
+            const idx = skillsList.findIndex(s => s.id === skillId);
+            if (idx !== -1) skillsList[idx] = updated;
+            showToast('Passing score updated successfully!');
+        } catch (err) {
+            showToast('Failed to update passing score: ' + err.message);
+        }
+    });
+
+    document.getElementById('btn-add-option').addEventListener('click', () => {
+        document.getElementById('dynamic-options-list').appendChild(createOptionRow());
+    });
+    
+    document.getElementById('q-type').addEventListener('change', (e) => {
+        if(e.target.value === 'multiple_choice') {
+            document.getElementById('options-container').classList.remove('hidden');
+            document.getElementById('answer-container').classList.add('hidden');
+            document.getElementById('q-answer-open').removeAttribute('required');
+        } else {
+            document.getElementById('options-container').classList.add('hidden');
+            document.getElementById('answer-container').classList.remove('hidden');
+            document.getElementById('q-answer-open').setAttribute('required', 'required');
+        }
+    });
+
+    // Initialize defaults
+    renderOptions();
+    document.getElementById('q-type').dispatchEvent(new Event('change'));
+
+    document.getElementById('question-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const skill_id = parseInt(document.getElementById('eng-q-skill').value);
-        const type = document.getElementById('eng-q-type').value;
-        const content = document.getElementById('eng-q-content').value;
-        const optionsText = document.getElementById('eng-q-options').value;
-        const answer = document.getElementById('eng-q-answer').value;
-
+        const skill_id = parseInt(document.getElementById('q-skill').value);
+        const type = document.getElementById('q-type').value;
+        const points = parseInt(document.getElementById('q-points').value);
+        const content = document.getElementById('q-content').value;
         let options = null;
+        let answer = '';
+        
         if (type === 'multiple_choice') {
-            try {
-                options = JSON.parse(optionsText);
-            } catch (err) {
-                showToast('Options format error: Must be valid JSON array, e.g. ["A", "B"]');
+            const rows = document.querySelectorAll('.option-row');
+            options = Array.from(rows).map(row => row.querySelector('.option-input').value.trim());
+            
+            if (options.length < 2) {
+                showToast('Please provide at least 2 options for Multiple Choice.');
                 return;
             }
+            if (options.some(opt => opt === '')) {
+                showToast('Options cannot be empty.');
+                return;
+            }
+            
+            const checkedRadio = document.querySelector('.correct-answer-radio:checked');
+            if (!checkedRadio) {
+                showToast('Please select a correct answer by clicking a radio button.');
+                return;
+            }
+            
+            const checkedRow = checkedRadio.closest('.option-row');
+            answer = checkedRow.querySelector('.option-input').value.trim();
+            
+        } else {
+            answer = document.getElementById('q-answer-open').value.trim();
         }
 
-        const payload = { skill_id, type, content, options, answer };
+        const payload = { skill_id, type, points, content, options, answer };
 
         try {
             if (editingQuestionId) {
                 await Api.updateQuestion(editingQuestionId, payload);
                 showToast('Question updated successfully');
-                cancelEngEditing();
+                cancelEditing();
             } else {
                 await Api.createQuestion(payload);
                 showToast('Question created successfully');
-                document.getElementById('eng-q-content').value = '';
-                document.getElementById('eng-q-options').value = '';
-                document.getElementById('eng-q-answer').value = '';
+                document.getElementById('q-content').value = '';
+                document.getElementById('q-points').value = '10';
+                renderOptions();
+                document.getElementById('q-answer-open').value = '';
             }
 
             allQuestions = await Api.getQuestions();
-            renderEngQuestions();
+            renderQuestionsForSelectedSkill();
         } catch (err) {
             showToast('Failed to save question: ' + err.message);
         }

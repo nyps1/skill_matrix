@@ -23,7 +23,9 @@ def manage_skills(current_user):
 @token_required
 def update_skill_passing_score(current_user, skill_id):
     if current_user.role != 'leader':
-        return jsonify({'message': 'Only leader can update passing score'}), 403
+        authorized = [s.id for s in current_user.authorized_skills]
+        if skill_id not in authorized:
+            return jsonify({'message': 'Only leader or authorized engineer can update passing score'}), 403
     
     data = request.get_json()
     if 'passing_score' not in data:
