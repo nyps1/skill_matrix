@@ -3,12 +3,25 @@ import bcrypt
 from flask import Flask
 from app.extensions import db
 
+import sys
+
 def create_app():
-    app = Flask(__name__, static_folder='static', template_folder='templates')
+    if getattr(sys, 'frozen', False):
+        # Running in a PyInstaller bundle
+        template_folder = os.path.join(sys._MEIPASS, 'app', 'templates')
+        static_folder = os.path.join(sys._MEIPASS, 'app', 'static')
+        db_dir = os.path.dirname(sys.executable)
+    else:
+        # Running in normal Python environment
+        basedir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+        template_folder = os.path.join(basedir, 'app', 'templates')
+        static_folder = os.path.join(basedir, 'app', 'static')
+        db_dir = basedir
+        
+    app = Flask(__name__, static_folder=static_folder, template_folder=template_folder)
     
     # Configure Database
-    basedir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'skill_assessment.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(db_dir, 'skill_assessment.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     # Initialize Extensions
