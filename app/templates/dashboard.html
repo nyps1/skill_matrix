@@ -56,6 +56,7 @@
 <script>
 let dashboardData = [];
 let chartInstances = {};
+let allSkillsMap = {};
 
 // Deleted unused score color/label functions
 
@@ -87,13 +88,19 @@ function renderCharts() {
     Object.values(chartInstances).forEach(chart => chart.destroy());
     chartInstances = {};
 
-    container.innerHTML = filtered.map(d => `
+    container.innerHTML = filtered.map(d => {
+        const filterSkillId = filterSkill ? allSkillsMap[filterSkill] : null;
+        const isTrainer = filterSkillId && d.user.authorized_skills && d.user.authorized_skills.includes(filterSkillId);
+        const cardClass = isTrainer ? 'border-danger border-2' : 'border-0';
+        
+        return `
         <div class="col-md-6 col-lg-4 mb-4">
-            <div class="card dashboard-card h-100 shadow-sm border-0" 
+            <div class="card dashboard-card h-100 shadow-sm ${cardClass}" 
                  style="cursor: pointer;" 
                  onclick="toggleSkillDetail(${d.user.id})">
-                <div class="card-body">
-                    <h5 class="card-title text-primary fw-bold mb-1">
+                <div class="card-body position-relative">
+                    ${isTrainer ? '<span class="position-absolute top-0 end-0 badge bg-danger m-3">Trainer</span>' : ''}
+                    <h5 class="card-title text-primary fw-bold mb-1" style="${isTrainer ? 'padding-right: 60px;' : ''}">
                         ${escapeHtml(d.user.username)}
                         ${!d.user.is_active ? '<span class="badge bg-danger ms-2">Inactive</span>' : ''}
                     </h5>
@@ -112,7 +119,8 @@ function renderCharts() {
                 </div>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 
     // Render Charts
     filtered.forEach(d => {
@@ -241,8 +249,12 @@ function toggleSkillDetail(userId) {
 
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        const res = await Api.getAdminDashboard();
+        const [res, skillsRes] = await Promise.all([
+            Api.getAdminDashboard(),
+            Api.getSkills()
+        ]);
         dashboardData = res.dashboard || [];
+        skillsRes.forEach(s => allSkillsMap[s.name] = s.id);
         
         // Populate skill filter dropdown
         const skillsSet = new Set();
