@@ -55,15 +55,33 @@ async function loadSkills() {
         container.innerHTML = `
             <div class="d-flex flex-wrap gap-2">
                 ${skills.map(s => `
-                    <div class="badge bg-info text-dark fs-6 px-3 py-2 border border-info-subtle shadow-sm text-start">
+                    <div class="badge bg-info text-dark fs-6 px-3 py-2 border border-info-subtle shadow-sm text-start position-relative pe-5">
                         <div class="fw-bold">${escapeHtml(s.name)}</div>
                         ${s.description ? `<div class="small fw-normal text-secondary mt-1">${escapeHtml(s.description)}</div>` : ''}
+                        <button class="btn btn-sm btn-outline-danger position-absolute top-50 end-0 translate-middle-y me-2 p-1"
+                                onclick="deleteSkill(${s.id}, '${escapeHtml(s.name)}')" title="Delete Skill">
+                            <i class="bi bi-trash"></i>
+                        </button>
                     </div>
                 `).join('')}
             </div>
         `;
     } catch (err) {
         container.innerHTML = `<div class="alert alert-danger mb-0">Failed to load skills: ${err.message}</div>`;
+    }
+}
+
+async function deleteSkill(skillId, skillName) {
+    if (!confirm(`Are you sure you want to delete the skill "${skillName}"? This will also delete all associated questions, exams, and grading history for this skill! This action cannot be undone.`)) {
+        return;
+    }
+    
+    try {
+        await Api.deleteSkill(skillId);
+        showToast('Skill deleted successfully');
+        loadSkills();
+    } catch (err) {
+        showToast('Failed to delete skill: ' + err.message);
     }
 }
 

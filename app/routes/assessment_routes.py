@@ -19,6 +19,15 @@ def manage_skills(current_user):
     skills = AssessmentRepository.get_all_skills()
     return jsonify([s.to_dict() for s in skills]), 200
 
+@assessment_bp.route('/skills/<int:skill_id>', methods=['DELETE'])
+@token_required
+def delete_skill(current_user, skill_id):
+    try:
+        AssessmentService.delete_skill(skill_id, current_user)
+        return jsonify({'message': 'Skill deleted successfully'}), 200
+    except ValueError as e:
+        return jsonify({'message': str(e)}), 403
+
 @assessment_bp.route('/skills/<int:skill_id>/passing_score', methods=['PUT'])
 @token_required
 def update_skill_passing_score(current_user, skill_id):

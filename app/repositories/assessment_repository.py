@@ -16,6 +16,29 @@ class AssessmentRepository:
         db.session.commit()
         return skill
 
+    @staticmethod
+    def delete_skill(skill_id):
+        skill = SkillCategory.query.get(skill_id)
+        if not skill:
+            return False
+            
+        # Clear many-to-many relationships
+        skill.authorized_users = []
+        skill.assigned_users = []
+        
+        # Delete associated answers and sessions
+        sessions = ExamSession.query.filter_by(skill_id=skill_id).all()
+        for session in sessions:
+            ExamAnswer.query.filter_by(session_id=session.id).delete(synchronize_session=False)
+            db.session.delete(session)
+            
+        # Delete associated questions
+        Question.query.filter_by(skill_id=skill_id).delete(synchronize_session=False)
+        
+        db.session.delete(skill)
+        db.session.commit()
+        return True
+
     # Questions
     @staticmethod
     def create_question(skill_id, q_type, content, options, answer, points=10):

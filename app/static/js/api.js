@@ -124,6 +124,12 @@ class Api {
         });
     }
 
+    static async deleteSkill(skillId) {
+        return this.request(`/assessment/skills/${skillId}`, {
+            method: 'DELETE'
+        });
+    }
+
     static async updateSkillPassingScore(skillId, passingScore) {
         return this.request(`/assessment/skills/${skillId}/passing_score`, {
             method: 'PUT',

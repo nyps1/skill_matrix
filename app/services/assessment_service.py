@@ -12,6 +12,15 @@ class AssessmentService:
         return AssessmentRepository.create_skill(data['name'], data.get('description', ''))
 
     @staticmethod
+    def delete_skill(skill_id, current_user):
+        if current_user.role != 'leader':
+            raise ValueError('Only leader can delete skills')
+        success = AssessmentRepository.delete_skill(skill_id)
+        if not success:
+            raise ValueError('Skill not found')
+        return True
+
+    @staticmethod
     def create_question(data, current_user):
         required_fields = ['skill_id', 'type', 'content', 'answer']
         if not all(k in data for k in required_fields):
